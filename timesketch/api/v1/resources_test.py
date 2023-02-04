@@ -641,7 +641,7 @@ class TimelineListResourceTest(BaseTest):
             data=json.dumps(data, ensure_ascii=False),
             content_type="application/json",
         )
-        self.assertEqual(response.status_code, HTTP_STATUS_CODE_CREATED)
+        self.assertEqual(response.status_code, HTTP_STATUS_CODE_OK)
 
     def test_add_new_timeline_resource(self):
         """Authenticated request to add a timeline to a sketch."""
