@@ -259,7 +259,8 @@ A sample code on how to ingest data into Timesketch that is already in OpenSearc
 
 - Method 1 - generate a timeline from a index in OpenSearch
 - Method 2 - generate a timeline from a index in OpenSearch, that contains documents
-  from multiple timelines filtered using the field `__ts_timeline_filter_id`
+  from multiple timelines filtered by the field `__ts_timeline_filter_id`
+  (of which the fieldtype is not text but e.g. keyword, long, etc, due to usage of filter term query)
 
 ```python
 from timesketch_api_client import config
