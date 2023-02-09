@@ -15,10 +15,14 @@
 
 import json
 import time
+import opensearchpy
 
 from timesketch_api_client import search
 
 from . import interface, manager
+
+OPENSEARCH_HOST = "opensearch"
+OPENSEARCH_PORT = 9200
 
 
 class ClientTest(interface.BaseEndToEndTest):
@@ -114,21 +118,40 @@ class ClientTest(interface.BaseEndToEndTest):
             self.assertions.assertEqual(
                 timelines[i].name, f"Ingested Via Mechanism - {i}"
             )
-            # Verify amount of events in timeline
             search_obj = search.Search(sketch)
             search_obj.query_string = f"__ts_timeline_filter_id:{i}"
             self.assertions.assertEqual(len(search_obj.table), 1)
-
 
     def test_direct_opensearch_disable_update_query(self):
         """Test injecting data into OpenSearch directly."""
         index_name = "index"
 
+        es = opensearchpy.OpenSearch(
+            [{"host": OPENSEARCH_HOST, "port": OPENSEARCH_PORT}], http_compress=True
+        )
+        body = {
+            "mappings": {
+                "properties": {
+                    "datetime": {"type": "date"},
+                    "timestamp": {"type": "long"},
+                    "timestamp_desc": {
+                        "type": "text",
+                        "fields": {"keyword": {"type": "keyword"}},
+                    },
+                    "message": {"type": "text"},
+                    "data_type": {
+                        "type": "text",
+                        "fields": {"keyword": {"type": "keyword"}},
+                    },
+                    "__ts_timeline_id": {"type": "long"},
+                }
+            }
+        }
+        es.indices.create(index_name, body=body)
+
         self.import_directly_to_opensearch(
             filename="sigma_events_timeline_id.csv", index_name=index_name
         )
-
-        # FIXME add test to verify label field
 
         sketch = self.api.create_sketch(
             name="Testing Direct", description="Adding data directly from ES"
@@ -151,8 +174,8 @@ class ClientTest(interface.BaseEndToEndTest):
         self.assertions.assertEqual(len(sketch.list_timelines()), 3)
 
         for i in range(1, 4):
-            self.assertions.assertEqual(timelines[i-1].name, f"Timeline - {i}")
-            self.assertions.assertEqual(timelines[i-1].id, i)
+            self.assertions.assertEqual(timelines[i - 1].name, f"Timeline - {i}")
+            self.assertions.assertEqual(timelines[i - 1].id, i)
             search_obj = search.Search(sketch)
             search_obj.query_string = f"__ts_timeline_id:{i}"
             self.assertions.assertEqual(len(search_obj.table), 1)
