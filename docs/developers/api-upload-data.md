@@ -245,8 +245,8 @@ work with Timesketch. This function does limited checking before making it
 available. The timeline may or may not work in Timesketch, depending on
 multiple factors._
 
-The data that is ingested needs to have few fields already set before it can be
-ingested into Timesketch:
+The data that is ingested and the index mappings need to have few fields
+already set before it can be used by Timesketch:
 
 - message
 - datetime
@@ -261,6 +261,9 @@ A sample code on how to ingest data into Timesketch that is already in OpenSearc
 - Method 2 - generate a timeline from a index in OpenSearch, that contains documents
   from multiple timelines filtered by the field `__ts_timeline_filter_id`
   (of which the fieldtype is not text but e.g. keyword, long, etc, due to usage of filter term query)
+- Method 3 - The same as method 2 but the update_by_query to add
+  `__ts_timeline_id` is not executed and the value `timeline.id` can be added
+  to the ingested documents. For example by adding the field with Logstash.
 
 ```python
 from timesketch_api_client import config
@@ -284,4 +287,17 @@ sketch.generate_timeline_from_es_index(
     provider='My Custom Ingestion Script',
     context='python my_custom_script.py --ingest',
 )
+
+# Method 3 - Multiple timeline from a single, where the timeline ID is returned
+timeline = sketch.generate_timeline_from_es_index(
+    es_index_name=OPENSEARCH_INDEX_NAME,
+    name=TIMELINE_NAME,
+    timeline_update_query=False,
+    provider='My Custom Ingestion Script',
+    context='python my_custom_script.py --ingest',
+)
+
+# Use `timeline.id` as value the docments that will be ingested in to the index
+# e.g. Logstash filter
+# filter { mutate {add_field => { "__ts_timeline_id" => "${TIMELINE_ID}"  } } } 
 ```

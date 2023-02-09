@@ -15,10 +15,14 @@
 
 import json
 import time
+import opensearchpy
 
 from timesketch_api_client import search
 
 from . import interface, manager
+
+OPENSEARCH_HOST = "opensearch"
+OPENSEARCH_PORT = 9200
 
 
 class ClientTest(interface.BaseEndToEndTest):
@@ -54,34 +58,52 @@ class ClientTest(interface.BaseEndToEndTest):
                 continue
             self.assertions.assertTrue(bool(index.index_name))
 
-    def test_direct_opensearch(self):
-        """Test injecting data into OpenSearch directly."""
-        single_index_name = "direct_testing"
-        multiple_index = "index-multiple"
+    def test_direct_opensearch_single_index(self):
+        """Generate timeline from a single index"""
+        index_name = "direct_testing"
 
         self.import_directly_to_opensearch(
-            filename="evtx_direct.csv", index_name=single_index_name
-        )
-        self.import_directly_to_opensearch(
-            filename="sigma_events_multiple.csv", index_name=multiple_index
+            filename="evtx_direct.csv", index_name=index_name
         )
 
-        new_sketch = self.api.create_sketch(
+        sketch = self.api.create_sketch(
             name="Testing Direct", description="Adding data directly from ES"
         )
 
         context = "e2e - > test_direct_opensearch"
-        timeline = new_sketch.generate_timeline_from_es_index(
-            es_index_name=single_index_name,
+        timeline = sketch.generate_timeline_from_es_index(
+            es_index_name=index_name,
             name="Ingested Via Mechanism",
             provider="end_to_end_testing_platform",
             context=context,
         )
-        multi_timeline = []
+        _ = sketch.lazyload_data(refresh_cache=True)
+        self.assertions.assertEqual(len(sketch.list_timelines()), 1)
+        self.assertions.assertEqual(timeline.name, "Ingested Via Mechanism")
+
+        data_sources = timeline.data_sources
+        self.assertions.assertEqual(len(data_sources), 1)
+        data_source = data_sources[0]
+        self.assertions.assertEqual(data_source.get("context", ""), context)
+
+    def test_direct_opensearch_timeline_filter_id(self):
+        """Generate multiple timelines from a single index"""
+        index_name = "index-multiple"
+
+        self.import_directly_to_opensearch(
+            filename="sigma_events_multiple.csv", index_name=index_name
+        )
+
+        sketch = self.api.create_sketch(
+            name="Testing Direct", description="Adding data directly from ES"
+        )
+
+        context = "e2e - > test_direct_opensearch"
+        timelines = []
         for i in range(0, 3):
-            multi_timeline.append(
-                new_sketch.generate_timeline_from_es_index(
-                    es_index_name=multiple_index,
+            timelines.append(
+                sketch.generate_timeline_from_es_index(
+                    es_index_name=index_name,
                     name=f"Ingested Via Mechanism - {i}",
                     provider="end_to_end_testing_platform",
                     context=context,
@@ -89,23 +111,76 @@ class ClientTest(interface.BaseEndToEndTest):
                 )
             )
 
-        _ = new_sketch.lazyload_data(refresh_cache=True)
-        self.assertions.assertEqual(len(new_sketch.list_timelines()), 4)
-        self.assertions.assertEqual(timeline.name, "Ingested Via Mechanism")
+        _ = sketch.lazyload_data(refresh_cache=True)
+        self.assertions.assertEqual(len(sketch.list_timelines()), 3)
 
         for i in range(0, 3):
             self.assertions.assertEqual(
-                multi_timeline[i].name, f"Ingested Via Mechanism - {i}"
+                timelines[i].name, f"Ingested Via Mechanism - {i}"
             )
-            # Verify amount of events in timeline
-            search_obj = search.Search(new_sketch)
+            search_obj = search.Search(sketch)
             search_obj.query_string = f"__ts_timeline_filter_id:{i}"
             self.assertions.assertEqual(len(search_obj.table), 1)
 
-        data_sources = timeline.data_sources
-        self.assertions.assertEqual(len(data_sources), 1)
-        data_source = data_sources[0]
-        self.assertions.assertEqual(data_source.get("context", ""), context)
+    def test_direct_opensearch_disable_update_query(self):
+        """Test injecting data into OpenSearch directly."""
+        index_name = "index"
+
+        es = opensearchpy.OpenSearch(
+            [{"host": OPENSEARCH_HOST, "port": OPENSEARCH_PORT}], http_compress=True
+        )
+        body = {
+            "mappings": {
+                "properties": {
+                    "datetime": {"type": "date"},
+                    "timestamp": {"type": "long"},
+                    "timestamp_desc": {
+                        "type": "text",
+                        "fields": {"keyword": {"type": "keyword"}},
+                    },
+                    "message": {"type": "text"},
+                    "data_type": {
+                        "type": "text",
+                        "fields": {"keyword": {"type": "keyword"}},
+                    },
+                    "__ts_timeline_id": {"type": "long"},
+                }
+            }
+        }
+        es.indices.create(index_name, body=body)
+
+        self.import_directly_to_opensearch(
+            filename="sigma_events_timeline_id.csv", index_name=index_name
+        )
+
+        sketch = self.api.create_sketch(
+            name="Testing Direct", description="Adding data directly from ES"
+        )
+
+        context = "e2e - > test_direct_opensearch"
+        timelines = []
+        for i in range(1, 4):
+            timelines.append(
+                sketch.generate_timeline_from_es_index(
+                    es_index_name=index_name,
+                    name=f"Timeline - {i}",
+                    timeline_update_query=False,
+                    provider="end_to_end_testing_platform",
+                    context=context,
+                )
+            )
+
+        _ = sketch.lazyload_data(refresh_cache=True)
+        self.assertions.assertEqual(len(sketch.list_timelines()), 3)
+
+        for i in range(1, 4):
+            self.assertions.assertEqual(timelines[i - 1].name, f"Timeline - {i}")
+            self.assertions.assertEqual(
+                sketch.get_timeline(timelines[i - 1].id).id, timelines[i - 1].id
+            )
+            search_obj = search.Search(sketch)
+            search_obj.query_string = f"__ts_timeline_id:{i}"
+            self.assertions.assertEqual(len(search_obj.table), 1)
 
     def test_create_sigma_rule(self):
         """Create a Sigma rule in database"""

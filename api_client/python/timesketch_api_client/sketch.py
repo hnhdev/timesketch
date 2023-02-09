@@ -1691,7 +1691,7 @@ class Sketch(resource.BaseResource):
         es_index_name,
         name,
         timeline_filter_id=None,
-        description="",
+        timeline_update_query=True,
         provider="Manually added to OpenSearch",
         context="Added via API client",
         data_label="OpenSearch",
@@ -1710,6 +1710,9 @@ class Sketch(resource.BaseResource):
             name: string with the name of the timeline.
             timeline_filter_id: optional string to filter on documents in an
             index with multiple timelines.
+            timeline_update_query: optional boolean to determine if the update
+                by query is executed to add the timeline ID to the documents
+                , defaults to True.
             description: optional string with a description of the timeline.
             provider: optional string with the provider name for the data
                 source of the imported data. Defaults to "Manually added
@@ -1736,9 +1739,8 @@ class Sketch(resource.BaseResource):
             raise ValueError("Timeline name needs to be provided.")
 
         # Step 1: Make sure the index doesn't exist already.
-        # This step is skipped if a timeline filter identifier is applied
-        # otherwise an index can not be used for multiple timelines.
-        if timeline_filter_id is None:
+        # This step is executed when an index is used for a single timeline
+        if (None, True) == (timeline_filter_id, timeline_update_query):
             for index_obj in self.api.list_searchindices():
                 if index_obj is None:
                     continue
@@ -1773,7 +1775,6 @@ class Sketch(resource.BaseResource):
         # Step 3: Verify mappings to make sure data conforms.
         index_obj = api_index.SearchIndex(searchindex_id, api=self.api)
         index_fields = set(index_obj.fields)
-
         if not self._NECESSARY_DATA_FIELDS.issubset(index_fields):
             index_obj.status = "fail"
             raise ValueError(
@@ -1816,20 +1817,25 @@ class Sketch(resource.BaseResource):
         )
 
         # Step 5: Add the timeline ID into the dataset.
-        resource_url = f"{self.api.api_root}/sketches/{self.id}/event/add_timeline_id/"
-        form_data = {
-            "searchindex_id": searchindex_id,
-            "timeline_id": timeline_dict["id"],
-            "timeline_filter_id": timeline_filter_id,
-        }
-        response = self.api.session.post(resource_url, json=form_data)
-
-        if response.status_code not in definitions.HTTP_STATUS_CODE_20X:
-            error.error_message(
-                response,
-                message="Unable to add timeline identifier to data",
-                error=ValueError,
+        # This step is skipped if the update_by_query is `False`, because the
+        # documents will be ingested with timeline ID as field
+        if timeline_update_query:
+            resource_url = (
+                f"{self.api.api_root}/sketches/{self.id}/event/add_timeline_id/"
             )
+            form_data = {
+                "searchindex_id": searchindex_id,
+                "timeline_id": timeline_dict["id"],
+                "timeline_filter_id": timeline_filter_id,
+            }
+            response = self.api.session.post(resource_url, json=form_data)
+
+            if response.status_code not in definitions.HTTP_STATUS_CODE_20X:
+                error.error_message(
+                    response,
+                    message="Unable to add timeline identifier to data",
+                    error=ValueError,
+                )
 
         # Step 6: Add a DataSource object.
         resource_url = f"{self.api.api_root}/sketches/{self.id}/datasource/"
