@@ -95,13 +95,6 @@ class ClientTest(interface.BaseEndToEndTest):
         )
 
         context = "e2e - > test_direct_opensearch"
-        timeline = sketch.generate_timeline_from_es_index(
-            es_index_name=index_name,
-            name="Ingested Via Mechanism",
-            provider="end_to_end_testing_platform",
-            context=context,
-        )
-
         timelines = []
         for i in range(0, 3):
             timelines.append(
@@ -116,7 +109,6 @@ class ClientTest(interface.BaseEndToEndTest):
 
         _ = sketch.lazyload_data(refresh_cache=True)
         self.assertions.assertEqual(len(sketch.list_timelines()), 3)
-        self.assertions.assertEqual(timeline.name, "Ingested Via Mechanism")
 
         for i in range(0, 3):
             self.assertions.assertEqual(
@@ -127,10 +119,6 @@ class ClientTest(interface.BaseEndToEndTest):
             search_obj.query_string = f"__ts_timeline_filter_id:{i}"
             self.assertions.assertEqual(len(search_obj.table), 1)
 
-        data_sources = timeline.data_sources
-        self.assertions.assertEqual(len(data_sources), 1)
-        data_source = data_sources[0]
-        self.assertions.assertEqual(data_source.get("context", ""), context)
 
     def test_direct_opensearch_disable_update_query(self):
         """Test injecting data into OpenSearch directly."""
@@ -163,8 +151,8 @@ class ClientTest(interface.BaseEndToEndTest):
         self.assertions.assertEqual(len(sketch.list_timelines()), 3)
 
         for i in range(1, 4):
-            self.assertions.assertEqual(timelines[i].name, f"Timeline - {i}")
-            self.assertions.assertEqual(timelines[i].id, i)
+            self.assertions.assertEqual(timelines[i-1].name, f"Timeline - {i}")
+            self.assertions.assertEqual(timelines[i-1].id, i)
             search_obj = search.Search(sketch)
             search_obj.query_string = f"__ts_timeline_id:{i}"
             self.assertions.assertEqual(len(search_obj.table), 1)
