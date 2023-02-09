@@ -175,11 +175,9 @@ class ClientTest(interface.BaseEndToEndTest):
 
         for i in range(1, 4):
             self.assertions.assertEqual(timelines[i - 1].name, f"Timeline - {i}")
-            self.assertions.assertEqual(timelines[i - 1].id, i)
+            self.assertions.assertEqual(sketch.get_timeline(timelines[i - 1].id).id, timelines[i - 1].id)
             search_obj = search.Search(sketch)
             search_obj.query_string = f"__ts_timeline_id:{i}"
-            print(search_obj.table)
-            print(search_obj)
             self.assertions.assertEqual(len(search_obj.table), 1)
 
     def test_create_sigma_rule(self):
