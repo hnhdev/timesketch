@@ -178,6 +178,8 @@ class ClientTest(interface.BaseEndToEndTest):
             self.assertions.assertEqual(timelines[i - 1].id, i)
             search_obj = search.Search(sketch)
             search_obj.query_string = f"__ts_timeline_id:{i}"
+            print(search_obj.table)
+            print(search_obj)
             self.assertions.assertEqual(len(search_obj.table), 1)
 
     def test_create_sigma_rule(self):
