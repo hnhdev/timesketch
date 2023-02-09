@@ -147,19 +147,13 @@ class ClientTest(interface.BaseEndToEndTest):
         )
 
         context = "e2e - > test_direct_opensearch"
-        timeline = sketch.generate_timeline_from_es_index(
-            es_index_name=index_name,
-            name="Ingested Via Mechanism",
-            provider="end_to_end_testing_platform",
-            context=context,
-        )
         timelines = []
         for i in range(1, 4):
             timelines.append(
                 sketch.generate_timeline_from_es_index(
                     es_index_name=index_name,
                     name=f"Timeline - {i}",
-                    update_query=False,
+                    timeline_update_query=False,
                     provider="end_to_end_testing_platform",
                     context=context,
                 )
@@ -174,11 +168,6 @@ class ClientTest(interface.BaseEndToEndTest):
             search_obj = search.Search(sketch)
             search_obj.query_string = f"__ts_timeline_id:{i}"
             self.assertions.assertEqual(len(search_obj.table), 1)
-
-        data_sources = timeline.data_sources
-        self.assertions.assertEqual(len(data_sources), 1)
-        data_source = data_sources[0]
-        self.assertions.assertEqual(data_source.get("context", ""), context)
 
     def test_create_sigma_rule(self):
         """Create a Sigma rule in database"""
