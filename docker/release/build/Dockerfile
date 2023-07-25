@@ -3,6 +3,7 @@ FROM ubuntu:22.04
 
 ARG PPA_TRACK=stable
 ARG BRANCH
+RUN echo $BRANCH
 
 # Prevent needing to configure debian packages, stopping the setup of
 # the docker container.
@@ -19,8 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && rm -rf /var/lib/apt/lists/*
 
 # Install Timesketch
-RUN echo $BRANCH
-RUN wget https://raw.githubusercontent.com/hnhdev/timesketch/$BRANCH/requirements.txt
+RUN wget https://raw.githubusercontent.com/hnhdev/timesketch/${BRANCH}/requirements.txt
 RUN pip3 install -r requirements.txt
 RUN pip3 install https://github.com/hnhdev/timesketch/archive/$BRANCH.zip
 
