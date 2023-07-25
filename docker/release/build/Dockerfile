@@ -3,7 +3,6 @@ FROM ubuntu:22.04
 
 ARG PPA_TRACK=stable
 ARG BRANCH
-RUN echo $BRANCH
 
 # Prevent needing to configure debian packages, stopping the setup of
 # the docker container.
