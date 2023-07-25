@@ -1,16 +1,18 @@
 name: build-image
 
 on:
-  push:
   pull_request:
     types: [opened, synchronize, reopened]
 
 jobs:
-  build-and-push-timesketch-image:
+  build-timesketch-image:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Build Docker image
-        uses: docker/build-push-action@v4
-        with:
+     - name: Checkout repository
+       uses: actions/checkout@v3
+  
+     - name: Build Docker image
+       uses: docker/build-push-action@v4
+       with:
           context: docker/release/build
