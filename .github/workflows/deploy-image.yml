@@ -39,7 +39,7 @@ jobs:
         with:
           context: docker/release/build
           build-args: |
-            BRANCH=${{ github.head_ref }}
+            BRANCH=${{ github.ref_name }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
