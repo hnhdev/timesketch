@@ -17,4 +17,4 @@ jobs:
        with:
           context: docker/release/build
           build-args: |
-            BRANCH=${{ github.GITHUB_REF_NAME }}
+            BRANCH=${{ github.ref }}
