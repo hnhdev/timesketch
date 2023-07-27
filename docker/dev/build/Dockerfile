@@ -1,10 +1,11 @@
-FROM us-docker.pkg.dev/osdfir-registry/picatrix/picatrix:latest
+# Use the official Docker Hub Ubuntu base image
+FROM ubuntu:22.04
 
-USER picatrix
+ARG PPA_TRACK=stable
 
-ENV VIRTUAL_ENV=/home/picatrix/picenv
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-ENV JUPYTER_PORT=8844
+# Prevent needing to configure debian packages, stopping the setup of
+# the docker container.
+RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     software-properties-common \
@@ -22,14 +23,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tzdata \
   && rm -rf /var/lib/apt/lists/*
 
-COPY --chown=1000:1000 docker/dev/build/timesketchrc /home/picatrix/.timesketchrc
-COPY --chown=1000:1000 docker/dev/build/timesketch_token /home/picatrix/.timesketch.token
-COPY --chown=1000:1000 . /home/picatrix/code
-COPY --chown=1000:1000 docker/dev/build/snippets.json /home/picatrix/.local/share/jupyter/nbextensions/snippets/snippets.json
-COPY --chown=1000:1000 docker/dev/build/10-widgets.py /home/picatrix/.ipython/profile_default/startup/10-widgets.py
-COPY --chown=1000:1000 docker/dev/build/logo.png /home/picatrix/.jupyter/custom/logo.png
-COPY --chown=1000:1000 docker/dev/build/custom.css /home/picatrix/.jupyter/custom/custom.css
-COPY --chown=1000:1000 docker/dev/build/timesketch /home/picatrix/picenv/share/jupyter/nbextensions/timesketch
+# Install Plaso
+RUN add-apt-repository -y ppa:gift/$PPA_TRACK
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    plaso-tools \
+  && rm -rf /var/lib/apt/lists/*
 
 # Install NodeJS for frontend development
 RUN curl -sL https://deb.nodesource.com/setup_18.x -o nodesource_setup.sh
@@ -38,8 +36,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     nodejs \
   && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /usr/local/src/picadata/
-EXPOSE 8844
+# Install Yarn for frontend development
+RUN npm install --global yarn
 
-# Run jupyter.
-ENTRYPOINT ["jupyter", "notebook"]
+# Install dependencies for Timesketch
+COPY ./requirements.txt /timesketch-requirements.txt
+RUN pip3 install -r /timesketch-requirements.txt
+
+# Install test dependencies for Timesketch
+COPY ./test_requirements.txt /timesketch-test-requirements.txt
+RUN pip3 install -r /timesketch-test-requirements.txt
+
+# Copy the entrypoint script into the container
+COPY ./docker/dev/build/docker-entrypoint.sh /
+RUN chmod a+x /docker-entrypoint.sh
+
+# Load the entrypoint script to be run later
+ENTRYPOINT ["/docker-entrypoint.sh"]
