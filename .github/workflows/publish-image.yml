@@ -1,4 +1,4 @@
-name: Create and publish a Docker image
+name: Build and publish Timesketch Docker image
 
 on:
   push:
@@ -11,7 +11,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build-and-push-timesketch-image:
+  build-and-publish-timesketch-image:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -34,7 +34,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
-      - name: Build and push Docker image
+      - name: Build and publish Docker image
         uses: docker/build-push-action@v4
         with:
           context: docker/release/build
