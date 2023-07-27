@@ -15,59 +15,63 @@ limitations under the License.
 -->
 <template>
   <div>
-    <v-row no-gutters class="pa-2" :class="$vuetify.theme.dark ? 'dark-hover' : 'light-hover'">
-      <div @click="expanded = !expanded" style="cursor: pointer; font-size: 0.9em">
+    <v-row
+      no-gutters
+      class="pa-3 pl-1"
+      :class="$vuetify.theme.dark ? 'dark-hover' : 'light-hover'"
+      @click="getSigmaRuleResource(sigmaRule.rule_uuid)"
+      style="cursor: pointer; font-size: 0.9em"
+    >
+      <v-col cols="1" class="pl-1">
         <v-icon v-if="!expanded">mdi-chevron-right</v-icon>
         <v-icon v-else>mdi-chevron-down</v-icon>
-        {{ sigmaRule.title }}<v-chip rounded x-small class="ml-2">{{ sigmaRule.status }}</v-chip>
-      </div>
-      <v-spacer></v-spacer>
-      <div>
-        <v-menu>
+      </v-col>
+
+      <v-col cols="10">
+        {{ sigmaRule.title }}
+      </v-col>
+
+      <v-col cols="1">
+        <v-menu offset-y>
           <template v-slot:activator="{ on, attrs }">
             <v-btn small icon v-bind="attrs" v-on="on">
-              <v-icon>mdi-dots-vertical</v-icon>
+              <v-icon small>mdi-dots-vertical</v-icon>
             </v-btn>
           </template>
           <v-card>
-            <v-list>
+            <v-list dense>
               <v-list-item-group>
-                <v-list-item :to="{ name: 'Studio', params: { type: 'sigma', id: sigmaRule.rule_uuid } }">
+                <v-list-item :to="{ name: 'SigmaEditRule', params: { ruleId: sigmaRule.rule_uuid } }">
                   <v-list-item-icon>
-                    <v-icon>mdi-pencil</v-icon>
+                    <v-icon small>mdi-pencil</v-icon>
                   </v-list-item-icon>
-                  <v-list-item-content> Edit Rule </v-list-item-content>
+                  <v-list-item-title>Edit Rule</v-list-item-title>
                 </v-list-item>
                 <v-list-item v-on:click="downloadSigmaRule(sigmaRule.rule_uuid)">
                   <v-list-item-icon>
-                    <v-icon>mdi-download</v-icon>
+                    <v-icon small>mdi-download</v-icon>
                   </v-list-item-icon>
-                  <v-list-item-content>
-                    <v-list-item-title>Download Rule</v-list-item-title>
-                  </v-list-item-content>
+                  <v-list-item-title>Download Rule</v-list-item-title>
                 </v-list-item>
 
                 <v-list-item v-on:click="deprecateSigmaRule(sigmaRule.rule_uuid)">
                   <v-list-item-icon>
-                    <v-icon>mdi-archive</v-icon>
+                    <v-icon small>mdi-flash-off-outline</v-icon>
                   </v-list-item-icon>
-                  <v-list-item-content>
-                    <v-list-item-title>Deprecated Sigma rules will not be used in the Sigma analyzer</v-list-item-title>
-                  </v-list-item-content>
+
+                  <v-list-item-title>Disable from analyzer</v-list-item-title>
                 </v-list-item>
                 <v-list-item v-on:click="deleteRule(sigmaRule.rule_uuid)">
                   <v-list-item-icon>
-                    <v-icon>mdi-delete</v-icon>
+                    <v-icon small>mdi-delete</v-icon>
                   </v-list-item-icon>
-                  <v-list-item-content>
-                    <v-list-item-title>Delete Rule</v-list-item-title>
-                  </v-list-item-content>
+                  <v-list-item-title>Delete Rule</v-list-item-title>
                 </v-list-item>
               </v-list-item-group>
             </v-list>
           </v-card>
         </v-menu>
-      </div>
+      </v-col>
     </v-row>
 
     <v-expand-transition>
@@ -106,7 +110,12 @@ limitations under the License.
         </div>
 
         <div class="mt-3">
-          <v-btn @click="search(sigmaRule.search_query)" small depressed color="primary" v-if="sketch.id !== undefined"
+          <v-btn
+            @click="search(detailedSigmaRule.search_query)"
+            small
+            depressed
+            color="primary"
+            v-if="sketch.id !== undefined"
             >Search</v-btn
           >
         </div>
@@ -120,23 +129,13 @@ limitations under the License.
 import EventBus from '../../main'
 import ApiClient from '../../utils/RestApiClient'
 
-const defaultQueryFilter = () => {
-  return {
-    from: 0,
-    terminate_after: 40,
-    size: 40,
-    indices: '_all',
-    order: 'asc',
-    chips: [],
-  }
-}
-
 export default {
   components: {},
   props: ['sigmaRule'],
   data: function () {
     return {
       expanded: false,
+      detailedSigmaRule: [],
     }
   },
   computed: {
@@ -157,7 +156,7 @@ export default {
         'rule_uuid',
         'search_query',
       ]
-      return Object.fromEntries(Object.entries(this.sigmaRule).filter(([key]) => fields.includes(key)))
+      return Object.fromEntries(Object.entries(this.detailedSigmaRule).filter(([key]) => fields.includes(key)))
     },
   },
   methods: {
@@ -165,7 +164,6 @@ export default {
       let eventData = {}
       eventData.doSearch = true
       eventData.queryString = queryString
-      eventData.queryFilter = defaultQueryFilter()
       EventBus.$emit('setQueryAndFilter', eventData)
     },
     deleteRule(ruleUuid) {
@@ -185,6 +183,16 @@ export default {
             console.error(e)
           })
       }
+    },
+    getSigmaRuleResource(ruleUuid) {
+      ApiClient.getSigmaRuleResource(ruleUuid)
+        .then((response) => {
+          this.detailedSigmaRule = response.data.objects[0]
+          this.expanded = !this.expanded
+        })
+        .catch((e) => {
+          console.error(e)
+        })
     },
     deprecateSigmaRule(ruleUuid) {
       // Rules with a "deprecated" status means the rule

@@ -6,8 +6,21 @@ ENV VIRTUAL_ENV=/home/picatrix/picenv
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 ENV JUPYTER_PORT=8844
 
-RUN mkdir -p /home/picatrix/.local/share/jupyter/nbextensions/snippets/ && \
-    mkdir -p /home/picatrix/.jupyter/custom
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    software-properties-common \
+    apt-transport-https \
+    apt-utils \
+    ca-certificates \
+    curl \
+    git \
+    gpg-agent \
+    python3-dev \
+    python3-pip \
+    python3-wheel \
+    python3-setuptools \
+    python3-psycopg2 \
+    tzdata \
+  && rm -rf /var/lib/apt/lists/*
 
 COPY --chown=1000:1000 docker/dev/build/timesketchrc /home/picatrix/.timesketchrc
 COPY --chown=1000:1000 docker/dev/build/timesketch_token /home/picatrix/.timesketch.token
@@ -18,15 +31,12 @@ COPY --chown=1000:1000 docker/dev/build/logo.png /home/picatrix/.jupyter/custom/
 COPY --chown=1000:1000 docker/dev/build/custom.css /home/picatrix/.jupyter/custom/custom.css
 COPY --chown=1000:1000 docker/dev/build/timesketch /home/picatrix/picenv/share/jupyter/nbextensions/timesketch
 
-RUN sed -i -e "s/c.NotebookApp.token = 'picatrix'/c.NotebookApp.token = 'timesketch'/g" /home/picatrix/.jupyter/jupyter_notebook_config.py && \
-    sed -i -e "s/c.NotebookApp.port = 8899/c.NotebookApp.port = 8844/g" /home/picatrix/.jupyter/jupyter_notebook_config.py && \
-    pip install -e /home/picatrix/code/api_client/python && \
-    pip install -e /home/picatrix/code/importer_client/python/ && \
-    jupyter nbextension enable snippets/main && \
-    jupyter nbextension enable timesketch/main && \
-    pip install ipydatetime && \
-    jupyter nbextension install --user --py ipydatetime && \
-    jupyter nbextension enable --user --py ipydatetime
+# Install NodeJS for frontend development
+RUN curl -sL https://deb.nodesource.com/setup_18.x -o nodesource_setup.sh
+RUN bash nodesource_setup.sh
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    nodejs \
+  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/local/src/picadata/
 EXPOSE 8844

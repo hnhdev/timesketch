@@ -70,21 +70,31 @@ class TestSigmaUtilLib(BaseTest):
         )
         self.assertEqual(sigma_util._sanitize_query("*foo bar*"), '"foo bar"')
 
-        # test that the function does not break regular queries
+    def test_sanitize_rule_string_multiple_or(self):
+        """test that the function does not break regular queries"""
+        # pylint: disable=protected-access
         self.assertEqual(
             sigma_util._sanitize_query("*mimikatz* OR *mimikatz.exe* OR *mimilib.dll*"),
             "*mimikatz* OR *mimikatz.exe* OR *mimilib.dll*",
         )
 
+    def test_sanitize_rule_string_multiple_colon(self):
+        """Test sanitization of query with multiple colons and asterisks"""
+        # pylint: disable=protected-access
         test_2 = sigma_util._sanitize_query("(*a:b* OR *c::d*)")
         self.assertEqual(test_2, r'("a:b" OR "c\:\:d")')
 
+    def test_sanitize_rule_string_with_dotkeyword(self):
+        """Test sanitization of query with .keyword in them"""
+        # pylint: disable=protected-access
         test_3 = sigma_util._sanitize_query(
             '(xml_string.keyword:"\\foobar.exe" AND GrantedAccess.keyword:"10")'
         )
-
         self.assertEqual(test_3, r'(xml_string:"\foobar.exe" AND GrantedAccess:"10")')
 
+    def test_sanitize_rule_string_with_double_quotes(self):
+        """Test sanitization of query with double quotes in the query"""
+        # pylint: disable=protected-access
         test_4 = sigma_util._sanitize_query(
             '(xml_string:C:\\Program Files\\WindowsApps\\" AND xml_string: "GamingServices.exe)'  # pylint: disable=line-too-long
         )
@@ -397,3 +407,56 @@ detection:
         with self.assertRaises(ValueError):
             sigma_util.get_sigma_config_file("/foo")
         self.assertIsNotNone(sigma_util.get_sigma_config_file())
+
+    def test_get_sigmarule_by_text_first_term(self):
+        """Test getting sigma rule by text"""
+        rule = sigma_util.parse_sigma_rule_by_text(
+            r"""
+title: WMI Login
+id: 5af54681-df95-4c26-854f-2565e13cfab0
+status: stable
+description: Detection of logins performed with WMI
+detection:
+    star:
+        star:
+            - '*stararoundterm*'
+    quote:
+        quote:
+            - 'quote'
+    condition:
+        (1 of star) and (1 of quote)
+"""
+        )
+        self.assertIsNotNone(rule)
+
+    def test_sigmarule_by_text_three_words(self):
+        """
+        Testing the different terms in a Sigma rule and how each is treated.
+        Reference: https://github.com/google/timesketch/issues/2550
+        """
+        rule = sigma_util.parse_sigma_rule_by_text(
+            r"""
+title: test terms
+id: 6d8ca9f2-79e2-44bd-957d-b4d810374972
+description: Rule to test combination of three words and how they are parsed
+author: Alexander Jaeger
+date: 2023/02/13
+modified: 2023/02/13
+falsepositives:
+    - Legitimate usage of the terms
+tags:
+    - testrule
+status: experimental
+level: medium
+detection:
+    keywords:
+        - '*onlyoneterm*'
+        - '*two words*'
+        - '*completely new term*'
+    condition: keywords"""
+        )
+        self.assertIsNotNone(rule)
+        self.assertEqual(
+            r'("onlyoneterm" OR "two words" OR "completely new term")',
+            rule.get("search_query"),
+        )
