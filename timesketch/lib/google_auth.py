@@ -211,12 +211,11 @@ def decode_jwt(
     Raises:
         JwtValidationError: if the JWT token cannot be decoded.
     """
-    chosen_algorithm = current_app.config.get("GOOGLE_OIDC_ALGORITHM", algorithm)
     try:
         decoded_jwt = jwt.decode(
             jwt=encoded_jwt,
             key=public_key,
-            algorithms=[chosen_algorithm],
+            algorithms=[algorithm],
             audience=expected_audience,
         )
         return decoded_jwt
