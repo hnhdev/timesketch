@@ -82,7 +82,7 @@ def create_user(username, password=None):
     user.set_password(plaintext=password)
     db_session.add(user)
     db_session.commit()
-    print(f"User {username, password} created/updated")
+    print(f"User {username} created/updated")
 
 
 @cli.command(name="enable-user")
