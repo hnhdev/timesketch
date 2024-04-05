@@ -343,7 +343,7 @@ class TimesketchApi:
         # GCP IAP
         if token := os.getenv("AUTHORIZATION_TOKEN"):
             session.headers = {"Authorization": f"Bearer {token}"}
-        
+
         # If using HTTP Basic auth, add the user/pass to the session
         if auth_mode == "http-basic":
             session.auth = (username, password)
@@ -571,9 +571,9 @@ class TimesketchApi:
                 line_dict["field_{0:d}_name".format(field_index + 1)] = field.get(
                     "name"
                 )
-                line_dict["field_{0:d}_description".format(field_index + 1)] = (
-                    field.get("description")
-                )
+                line_dict[
+                    "field_{0:d}_description".format(field_index + 1)
+                ] = field.get("description")
             lines.append(line_dict)
 
         return pandas.DataFrame(lines)
