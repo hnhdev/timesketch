@@ -157,45 +157,7 @@ class ImportStreamer(object):
         if self._data_type and "data_type" not in data_frame:
             data_frame["data_type"] = self._data_type
 
-        if "datetime" not in data_frame:
-            if self._datetime_field and self._datetime_field in data_frame:
-                try:
-                    data_frame["timestamp"] = pandas.to_datetime(
-                        data_frame[self._datetime_field], utc=True
-                    )
-                except ValueError as e:
-                    logger.info(
-                        "Unable to convert timestamp in column: %s, error %s",
-                        self._datetime_field,
-                        e,
-                    )
-            else:
-                for column in data_frame.columns[
-                    data_frame.columns.str.contains("time", case=False)
-                ]:
-                    if column.lower() == "timestamp_desc":
-                        continue
-                    try:
-                        data_frame["timestamp"] = pandas.to_datetime(
-                            data_frame[column], utc=True
-                        )
-                        # We want the first successful timestamp value.
-                        break
-                    except ValueError as e:
-                        logger.info(
-                            "Unable to convert timestamp in column: " "%s, error %s",
-                            column,
-                            e,
-                        )
-
-            if "timestamp" in data_frame:
-                data_frame["datetime"] = data_frame["timestamp"].dt.strftime(
-                    "%Y-%m-%dT%H:%M:%S%z"
-                )
-                data_frame["timestamp"] = (
-                    data_frame["timestamp"].astype(numpy.int64) / 1e9
-                )
-        else:
+        if "datetime" in data_frame:
             try:
                 date = pandas.to_datetime(data_frame["datetime"], utc=True)
                 data_frame["datetime"] = date.dt.strftime("%Y-%m-%dT%H:%M:%S%z")
