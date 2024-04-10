@@ -15,8 +15,17 @@ limitations under the License.
 */
 export default {
   name: 'formatTimestamp',
-  filter: function (datetime) {
-    let datetime = new Date(datetime).getTime()
-    return datetime
+  filter: function(input) {
+    let tsLength = parseInt(input).toString().length
+    if (tsLength === 13) {
+      return input // exit early if timestamp is already in milliseconds
+    } else if (tsLength === 15 || tsLength === 16) {
+      input = input / 1000 // microseconds -> milliseconds
+    } else if (tsLength === 10) {
+      input = input * 1000000 // seconds -> milliseconds
+    } else if (tsLength === 19) {
+      input = input / 1000000 // nanoseconds -> milliseconds
+    }
+    return input
   },
 }
