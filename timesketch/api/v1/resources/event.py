@@ -14,7 +14,6 @@
 """Event resources for version 1 of the Timesketch API."""
 
 import codecs
-import datetime
 import hashlib
 import json
 import logging
