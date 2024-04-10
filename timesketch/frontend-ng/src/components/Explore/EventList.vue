@@ -79,7 +79,7 @@ limitations under the License.
       <v-sheet class="d-flex flex-wrap mt-1 mb-5">
         <v-sheet class="flex-1-0">
           <span style="width: 200px" v-bind:style="getTimelineColor(highlightEvent)" class="datetime-table-cell pa-2">
-            {{ highlightEvent._source.timestamp | formatTimestamp | toISO8601 }}
+            {{ highlightEvent._source.datetime | formatTimestamp | toISO8601 }}
           </span>
         </v-sheet>
 
@@ -142,7 +142,7 @@ limitations under the License.
         must-sort
         :sort-desc.sync="sortOrderAsc"
         @update:sort-desc="sortEvents"
-        sort-by="_source.timestamp"
+        sort-by="_source.datetime"
         :hide-default-footer="totalHits < 11 || disablePagination"
         :expanded="expandedRows"
         :dense="displayOptions.isCompact"
@@ -370,13 +370,12 @@ limitations under the License.
             </v-card>
           </template>
 
-          <!-- Event details -->
-          <template v-slot:expanded-item="{ headers, item }">
-            <td :colspan="headers.length">
-              <!-- Details -->
-              <v-container v-if="item.showDetails" fluid class="mt-4">
-                <ts-event-detail :event="item"></ts-event-detail>
-              </v-container>
+        <!-- Datetime field with action buttons -->
+        <template v-slot:item._source.datetime="{ item }">
+          <div v-bind:style="getTimelineColor(item)" class="datetime-table-cell">
+            {{ item._source.datetime | formatTimestamp | toISO8601 }}
+          </div>
+        </template>
 
               <!-- Time bubble -->
               <v-divider v-if="item.showDetails && item.deltaDays"></v-divider>
@@ -684,7 +683,7 @@ export default {
         {
           text: 'Datetime (UTC) ',
           align: 'start',
-          value: '_source.timestamp',
+          value: '_source.datetime',
           width: '200',
           sortable: true,
         },
@@ -784,8 +783,8 @@ export default {
           return
         }
         let prevEvent = this.eventList.objects[index - 1]
-        let timestampMillis = this.$options.filters.formatTimestamp(event._source.timestamp)
-        let prevTimestampMillis = this.$options.filters.formatTimestamp(prevEvent._source.timestamp)
+        let timestampMillis = this.$options.filters.formatTimestamp(event._source.datetime)
+        let prevTimestampMillis = this.$options.filters.formatTimestamp(prevEvent._source.datetime)
         let timestamp = Math.floor(timestampMillis / 1000)
         let prevTimestamp = Math.floor(prevTimestampMillis / 1000)
         let delta = Math.floor(timestamp - prevTimestamp)
