@@ -317,7 +317,7 @@ export default {
       return this.$store.state.sketch
     },
     eventDateTime() {
-      return new Date(this.eventTimestamp/1000).toISOString()
+      return new Date(this.eventTimestamp)
     },
     selectedDistributionInterval() {
       return this.distributionIntervals[this.selectedDistributionIntervalIndex]
@@ -580,36 +580,36 @@ export default {
       this.dataReady = false
       this.data = []
 
-      const currentDateTime = new Date(this.eventTimestamp/1000)
+      const currentDateTime = new Date(this.eventTimestamp)
       let startTime, endTime
       let supportedIntervals
 
       switch (this.selectedRecentEvents) {
         case "± 5 years":
-          startTime = new Date(this.eventTimestamp/1000)
+          startTime = new Date(this.eventTimestamp)
           startTime.setUTCFullYear(currentDateTime.getUTCFullYear() - 5)
-          endTime = new Date(this.eventTimestamp/1000)
+          endTime = new Date(this.eventTimestamp)
           endTime.setUTCFullYear(currentDateTime.getUTCFullYear() + 5)
           supportedIntervals = "year"
           break
         case "± 6 months":
-          startTime = new Date(this.eventTimestamp/1000)
+          startTime = new Date(this.eventTimestamp)
           startTime.setUTCMonth(currentDateTime.getUTCMonth() - 6)
-          endTime = new Date(this.eventTimestamp/1000)
+          endTime = new Date(this.eventTimestamp)
           endTime.setUTCMonth(currentDateTime.getUTCMonth() + 6)
           supportedIntervals = "month"
           break
         case "± 7 days":
-          startTime = new Date(this.eventTimestamp/1000)
+          startTime = new Date(this.eventTimestamp)
           startTime.setUTCDate(currentDateTime.getUTCDate() - 7)
-          endTime = new Date(this.eventTimestamp/1000)
+          endTime = new Date(this.eventTimestamp)
           endTime.setUTCDate(currentDateTime.getUTCDate() + 7)
           supportedIntervals = "day"
           break
         case "± 6 hours":
-          startTime = new Date(this.eventTimestamp/1000)
+          startTime = new Date(this.eventTimestamp)
           startTime.setUTCHours(currentDateTime.getUTCHours() - 6)
-          endTime = new Date(this.eventTimestamp/1000)
+          endTime = new Date(this.eventTimestamp)
           endTime.setUTCHours(currentDateTime.getUTCHours() + 6)
           supportedIntervals = "hour"
           break
