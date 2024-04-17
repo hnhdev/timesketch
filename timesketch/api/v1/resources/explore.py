@@ -26,7 +26,6 @@ from flask_restful import Resource, reqparse
 from timesketch.api.v1 import export, resources
 from timesketch.lib import forms, utils
 from timesketch.lib.definitions import (
-    DEFAULT_SOURCE_FIELDS,
     HTTP_STATUS_CODE_BAD_REQUEST,
     HTTP_STATUS_CODE_FORBIDDEN,
     HTTP_STATUS_CODE_NOT_FOUND,
