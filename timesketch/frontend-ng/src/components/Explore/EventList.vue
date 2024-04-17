@@ -304,7 +304,7 @@ limitations under the License.
                   ('tag' in item._source ? item._source.tag.length > 0 : false)
                 "
               >
-                <ts-event-tags :item="item" :tagConfig="tagConfig" :showDetails="item.showDetails"></ts-event-tags>
+                <ts-event-tags class="ts-event-tags" :item="item" :tagConfig="tagConfig" :showDetails="item.showDetails"></ts-event-tags>
               </span>
               <!-- Emojis -->
               <span v-if="displayOptions.showEmojis">
@@ -949,10 +949,14 @@ export default {
 </script>
 
 <style lang="scss">
+.ts-event-tags span {
+  height: 20px !important;
+}
+
 .ts-event-field-container {
   position: relative;
   max-width: 100%;
-  height: 66px;
+  height: 64;
   padding: 5px;
   padding-left: 0px !important;
   line-height: 16px; 
