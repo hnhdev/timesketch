@@ -37,7 +37,7 @@ limitations under the License.
         v-model="selectedEvents"
         :headers="headers"
         :items="eventList.objects"
-        :footer-props="{ 'items-per-page-options': [10, 40, 80, 100, 200, 500, 1000], 'show-current-page': true }"
+        :footer-props="{ 'items-per-page-options': [50, 100, 250, 500, 1000], 'show-current-page': true }"
         :loading="searchInProgress"
         :options.sync="tableOptions"
         :server-items-length="totalHitsForPagination"
@@ -209,7 +209,7 @@ limitations under the License.
               :options="options"
               @update:options="updateOptions"
               :show-current-page="true"
-              :items-per-page-options="[10, 40, 80, 100, 200, 500, 1000]"
+              :items-per-page-options="[50, 100, 250, 500, 1000]"
               items-per-page-text="Rows per page:"
               style="border: 0"
               class="mr-n3"
@@ -318,11 +318,14 @@ limitations under the License.
                 </span>
               </span>
               <span>
-                <b>timestamp_desc:</b><code>{{ item._source.timestamp_desc }}</code>
+                <b>timestamp_desc</b>:<code>{{ item._source.timestamp_desc }}</code>
+              </span>
+              <span>
+                <b>data_type</b>:<code>{{ item._source.data_type }}</code>
               </span>
               <template v-for="value, key in item._source">
                 <span v-if="isIncluded(key)">
-                  <b>{{ key }}:</b><code>{{ value }}</code>
+                  <b>{{ key }}</b>:<code>{{ value }}</code>
                 </span>
               </template>
             </span>
@@ -413,7 +416,7 @@ export default {
     },
     itemsPerPage: {
       type: Number,
-      default: 500,
+      default: 50,
     },
     disableSaveSearch: {
       type: Boolean,
@@ -668,7 +671,7 @@ export default {
       }
     },
     isIncluded(key) {
-      const hide_keys = ["datetime", "timestamp_desc", "tag", "label", "comment", "tag", "label"]
+      const hide_keys = ["datetime", "timestamp_desc", "tag", "label", "comment", "tag", "label", "data_type"]
       if (key.startsWith("__") || hide_keys.includes(key)) {
         return false
       } else {
@@ -946,11 +949,16 @@ export default {
 </script>
 
 <style lang="scss">
+.v-size--small {
+  height: 20px !important;
+}
+
 .ts-event-field-container {
   position: relative;
   max-width: 100%;
-  height: 70px;
-  padding: 6px;
+  height: 62px;
+  padding: 5px;
+  padding-left: 0px !important;
   line-height: 16px; 
   font-family: monospace;
   display: -webkit-flex;
@@ -1001,6 +1009,7 @@ export default {
 
 .datetime-table-cell {
   height: 100%;
+  font-weight: 401;
   display: flex;
   justify-content: center;
   align-items: center;
