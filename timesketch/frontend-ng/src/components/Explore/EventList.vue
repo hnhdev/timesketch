@@ -949,14 +949,10 @@ export default {
 </script>
 
 <style lang="scss">
-.v-size--small {
-  height: 20px !important;
-}
-
 .ts-event-field-container {
   position: relative;
   max-width: 100%;
-  height: 62px;
+  height: 66px;
   padding: 5px;
   padding-left: 0px !important;
   line-height: 16px; 
