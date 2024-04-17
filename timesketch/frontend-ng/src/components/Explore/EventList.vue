@@ -323,11 +323,11 @@ limitations under the License.
               <span>
                 <b>data_type</b>:<code>{{ item._source.data_type }}</code>
               </span>
-              <template v-for="value, key in item._source">
+              <span v-for="(value, key) in item._source" v-bind:key="key">
                 <span v-if="isIncluded(key)">
                   <b>{{ key }}</b>:<code>{{ value }}</code>
                 </span>
-              </template>
+              </span>
             </span>
           </div>
         </template>
@@ -671,8 +671,8 @@ export default {
       }
     },
     isIncluded(key) {
-      const hide_keys = ["datetime", "timestamp_desc", "tag", "label", "comment", "tag", "label", "data_type"]
-      if (key.startsWith("__") || hide_keys.includes(key)) {
+      const hideKeys = ["datetime", "timestamp_desc", "tag", "label", "comment", "tag", "label", "data_type"]
+      if (key.startsWith("__") || hideKeys.includes(key)) {
         return false
       } else {
         return true
