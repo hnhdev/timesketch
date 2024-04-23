@@ -86,9 +86,10 @@ class ClientTest(interface.BaseEndToEndTest):
         data_source = data_sources[0]
         self.assertions.assertEqual(data_source.get("context", ""), context)
 
-    def test_direct_opensearch(self):
+    def test_direct_opensearch_with_alias(self):
         """Test injecting data into OpenSearch directly."""
-        index_name = "index"
+        alias_name = "index"
+        index_name = "index-00001"
 
         es = opensearchpy.OpenSearch(
             [{"host": OPENSEARCH_HOST, "port": OPENSEARCH_PORT}], http_compress=True
@@ -111,6 +112,7 @@ class ClientTest(interface.BaseEndToEndTest):
             }
         }
         es.indices.create(index_name, body=body)
+        es.indices.put_alias(index=index_name, name=alias_name)
 
         self.import_directly_to_opensearch(
             filename="sigma_events_timeline_id.csv", index_name=index_name
