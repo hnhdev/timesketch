@@ -14,31 +14,29 @@
 """OpenSearch datastore."""
 from __future__ import unicode_literals
 
-from collections import Counter
-import copy
 import codecs
+import copy
 import json
 import logging
 import socket
+from collections import Counter
 from uuid import uuid4
-import six
 
+import prometheus_client
+import six
 from dateutil import parser, relativedelta
+from flask import abort, current_app
 from opensearchpy import OpenSearch
-from opensearchpy.exceptions import ConnectionTimeout
-from opensearchpy.exceptions import NotFoundError
-from opensearchpy.exceptions import RequestError
 
 # pylint: disable=redefined-builtin
-from opensearchpy.exceptions import ConnectionError
+from opensearchpy.exceptions import (
+    ConnectionError,
+    ConnectionTimeout,
+    NotFoundError,
+    RequestError,
+)
 
-from flask import abort
-from flask import current_app
-import prometheus_client
-
-from timesketch.lib.definitions import HTTP_STATUS_CODE_NOT_FOUND
-from timesketch.lib.definitions import METRICS_NAMESPACE
-
+from timesketch.lib.definitions import HTTP_STATUS_CODE_NOT_FOUND, METRICS_NAMESPACE
 
 # Setup logging
 es_logger = logging.getLogger("timesketch.opensearch")
@@ -561,26 +559,15 @@ class OpenSearchDataStore(object):
                 scroll=scroll_timeout,
             )
 
-        # The argument " _source_include" changed to "_source_includes" in
-        # ES version 7. This check add support for both version 6 and 7 clients.
-        # pylint: disable=unexpected-keyword-arg
         try:
-            if self.version.startswith("6"):
-                _search_result = self.client.search(
-                    body=query_dsl,
-                    index=list(indices),
-                    search_type=search_type,
-                    _source_include=return_fields,
-                    scroll=scroll_timeout,
-                )
-            else:
-                _search_result = self.client.search(
-                    body=query_dsl,
-                    index=list(indices),
-                    search_type=search_type,
-                    _source_includes=return_fields,
-                    scroll=scroll_timeout,
-                )
+            # pylint: disable=unexpected-keyword-arg
+            _search_result = self.client.search(
+                body=query_dsl,
+                index=list(indices),
+                search_type=search_type,
+                _source_includes=return_fields,
+                scroll=scroll_timeout,
+            )
         except RequestError as e:
             root_cause = e.info.get("error", {}).get("root_cause")
             if root_cause:
@@ -662,8 +649,7 @@ class OpenSearchDataStore(object):
             scroll_id = None
             scroll_size = 0
 
-        # Elasticsearch version 7.x returns total hits as a dictionary.
-        # TODO: Refactor when version 6.x has been deprecated.
+        # OpenSearch support
         if isinstance(scroll_size, dict):
             scroll_size = scroll_size.get("value", 0)
 
@@ -767,24 +753,13 @@ class OpenSearchDataStore(object):
         """
         METRICS["search_get_event"].inc()
         try:
-            # Suppress the lint error because opensearchpy adds parameters
-            # to the function with a decorator and this makes pylint sad.
             # pylint: disable=unexpected-keyword-arg
-            if self.version.startswith("6"):
-                event = self.client.get(
-                    index=searchindex_id,
-                    id=event_id,
-                    _source_exclude=["timesketch_label"],
-                )
-            else:
-                event = self.client.get(
-                    index=searchindex_id,
-                    id=event_id,
-                    _source_excludes=["timesketch_label"],
-                )
-
+            event = self.client.get(
+                id=event_id,
+                index=searchindex_id,
+                _source_excludes=["timesketch_label"],
+            )
             return event
-
         except NotFoundError:
             abort(HTTP_STATUS_CODE_NOT_FOUND)
 
@@ -1106,3 +1081,21 @@ class OpenSearchDataStore(object):
 
         self.import_events = []
         return return_dict
+
+    def resolve_index_alias(self, searchindex_id: str) -> tuple:
+        """Resolve the alias of an index.
+
+        Returns:
+            A tuple in the following order:
+                - The searchindex_id e.g. alias name
+                - The index of the document
+        """
+        try:
+            index_name = (
+                self.client.indices.resolve_index(searchindex_id)
+                .get("indices")[0]
+                .get("aliases")[0]
+            )
+            return index_name, searchindex_id
+        except TypeError:
+            return searchindex_id, searchindex_id
