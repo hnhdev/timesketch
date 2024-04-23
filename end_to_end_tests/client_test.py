@@ -127,7 +127,6 @@ class ClientTest(interface.BaseEndToEndTest):
                 sketch.generate_timeline_from_es_index(
                     es_index_name=index_name,
                     name=f"Timeline - {i}",
-                    timeline_update_query=False,
                     provider="end_to_end_testing_platform",
                     context=context,
                 )
