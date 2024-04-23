@@ -628,6 +628,7 @@ class EventTaggingResource(resources.ResourceMixin, Resource):
                 query_body["terminate_after"] = size
 
                 try:
+                    # pylint: disable=unexpected-keyword-arg
                     search = datastore.client.search(
                         body=json.dumps(query_body),
                         index=[_index],

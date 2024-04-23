@@ -562,6 +562,7 @@ class OpenSearchDataStore(object):
             )
 
         try:
+            # pylint: disable=unexpected-keyword-arg
             _search_result = self.client.search(
                 body=query_dsl,
                 index=list(indices),
@@ -752,6 +753,7 @@ class OpenSearchDataStore(object):
         """
         METRICS["search_get_event"].inc()
         try:
+            # pylint: disable=unexpected-keyword-arg
             event = self.client.get(
                 id=event_id,
                 index=searchindex_id,
