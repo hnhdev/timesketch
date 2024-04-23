@@ -253,7 +253,7 @@ The datetime field also needs to be mapped as a date, not a text string.
 
 A sample code on how to ingest data into Timesketch that is already in OpenSearch:
 
-- Method 1 - generate a timeline from a index in OpenSearch
+- Method 1 - generate a timeline from an index in OpenSearch
 - Method 2 - create a timeline and use the identifier to ingest a timeline into OpensSearch
 
 ```python
@@ -262,7 +262,7 @@ from timesketch_api_client import config
 ts_client = config.get_client()
 sketch = ts_client.get_sketch(SKETCH_ID)
  
-# Method 1 - Single timeline from a single index
+# Method 1 - Single timeline in a single index
 sketch.generate_timeline_from_es_index(
     es_index_name=OPENSEARCH_INDEX_NAME,
     name=TIMELINE_NAME,
@@ -270,7 +270,7 @@ sketch.generate_timeline_from_es_index(
     context='python my_custom_script.py --ingest',
 )
 
-# Method 2 - Multiple timeline from a single, where the timeline ID is returned
+# Method 2 - Multiple timelines in a single, where the timeline ID is returned
 timeline = sketch.generate_timeline_from_es_index(
     es_index_name=OPENSEARCH_INDEX_NAME,
     name=TIMELINE_NAME,
