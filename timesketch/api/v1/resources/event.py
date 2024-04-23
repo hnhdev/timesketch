@@ -628,21 +628,12 @@ class EventTaggingResource(resources.ResourceMixin, Resource):
                 query_body["terminate_after"] = size
 
                 try:
-                    # pylint: disable=unexpected-keyword-arg
-                    if datastore.version.startswith("6"):
-                        search = datastore.client.search(
-                            body=json.dumps(query_body),
-                            index=[_index],
-                            _source_include=["tag"],
-                            search_type="query_then_fetch",
-                        )
-                    else:
-                        search = datastore.client.search(
-                            body=json.dumps(query_body),
-                            index=[_index],
-                            _source_includes=["tag"],
-                            search_type="query_then_fetch",
-                        )
+                    search = datastore.client.search(
+                        body=json.dumps(query_body),
+                        index=[_index],
+                        _source_includes=["tag"],
+                        search_type="query_then_fetch",
+                    )
 
                 except RequestError as e:
                     logger.error("Unable to query for events", exc_info=True)

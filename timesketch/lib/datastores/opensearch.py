@@ -767,24 +767,12 @@ class OpenSearchDataStore(object):
         """
         METRICS["search_get_event"].inc()
         try:
-            # Suppress the lint error because opensearchpy adds parameters
-            # to the function with a decorator and this makes pylint sad.
-            # pylint: disable=unexpected-keyword-arg
-            if self.version.startswith("6"):
-                event = self.client.get(
-                    index=searchindex_id,
-                    id=event_id,
-                    _source_exclude=["timesketch_label"],
-                )
-            else:
-                event = self.client.get(
-                    index=searchindex_id,
-                    id=event_id,
-                    _source_excludes=["timesketch_label"],
-                )
-
+            event = self.client.get(
+                id=event_id,
+                index=searchindex_id,
+                _source_excludes=["timesketch_label"],
+            )
             return event
-
         except NotFoundError:
             abort(HTTP_STATUS_CODE_NOT_FOUND)
 
