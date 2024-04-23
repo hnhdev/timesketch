@@ -561,26 +561,14 @@ class OpenSearchDataStore(object):
                 scroll=scroll_timeout,
             )
 
-        # The argument " _source_include" changed to "_source_includes" in
-        # ES version 7. This check add support for both version 6 and 7 clients.
-        # pylint: disable=unexpected-keyword-arg
         try:
-            if self.version.startswith("6"):
-                _search_result = self.client.search(
-                    body=query_dsl,
-                    index=list(indices),
-                    search_type=search_type,
-                    _source_include=return_fields,
-                    scroll=scroll_timeout,
-                )
-            else:
-                _search_result = self.client.search(
-                    body=query_dsl,
-                    index=list(indices),
-                    search_type=search_type,
-                    _source_includes=return_fields,
-                    scroll=scroll_timeout,
-                )
+            _search_result = self.client.search(
+                body=query_dsl,
+                index=list(indices),
+                search_type=search_type,
+                _source_includes=return_fields,
+                scroll=scroll_timeout,
+            )
         except RequestError as e:
             root_cause = e.info.get("error", {}).get("root_cause")
             if root_cause:
@@ -662,10 +650,7 @@ class OpenSearchDataStore(object):
             scroll_id = None
             scroll_size = 0
 
-        # Elasticsearch version 7.x returns total hits as a dictionary.
-        # TODO: Refactor when version 6.x has been deprecated.
-        if isinstance(scroll_size, dict):
-            scroll_size = scroll_size.get("value", 0)
+        scroll_size = scroll_size.get("value", 0)
 
         for event in result["hits"]["hits"]:
             yield event
