@@ -651,7 +651,9 @@ class OpenSearchDataStore(object):
             scroll_id = None
             scroll_size = 0
 
-        scroll_size = scroll_size.get("value", 0)
+        # OpenSearch support
+        if isinstance(scroll_size, dict):
+            scroll_size = scroll_size.get("value", 0)
 
         for event in result["hits"]["hits"]:
             yield event

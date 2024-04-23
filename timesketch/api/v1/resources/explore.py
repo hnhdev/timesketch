@@ -420,7 +420,10 @@ class ExploreResource(resources.ResourceMixin, Resource):
             "search_node": search_node,
         }
 
-        meta["es_total_count"] = meta["es_total_count"].get("value", 0)
+        # Support OpenSearch
+        if isinstance(meta["es_total_count"], dict):
+            meta["es_total_count"] = meta["es_total_count"].get("value", 0)
+
         schema = {"meta": meta, "objects": result["hits"]["hits"]}
 
         return jsonify(schema)
