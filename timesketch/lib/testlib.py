@@ -345,7 +345,7 @@ class MockDataStore(object):
     def flush_queued_events(self):
         """No-op mock to flush_queued_events for the datastore."""
 
-    def resolve_index_of_document(self, searchindex_id: str) -> tuple:
+    def resolve_index_alias(self, searchindex_id: str) -> tuple:
         return searchindex_id, searchindex_id
 
 

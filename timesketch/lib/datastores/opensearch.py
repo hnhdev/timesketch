@@ -14,31 +14,29 @@
 """OpenSearch datastore."""
 from __future__ import unicode_literals
 
-from collections import Counter
-import copy
 import codecs
+import copy
 import json
 import logging
 import socket
+from collections import Counter
 from uuid import uuid4
-import six
 
+import prometheus_client
+import six
 from dateutil import parser, relativedelta
+from flask import abort, current_app
 from opensearchpy import OpenSearch
-from opensearchpy.exceptions import ConnectionTimeout
-from opensearchpy.exceptions import NotFoundError
-from opensearchpy.exceptions import RequestError
 
 # pylint: disable=redefined-builtin
-from opensearchpy.exceptions import ConnectionError
+from opensearchpy.exceptions import (
+    ConnectionError,
+    ConnectionTimeout,
+    NotFoundError,
+    RequestError,
+)
 
-from flask import abort
-from flask import current_app
-import prometheus_client
-
-from timesketch.lib.definitions import HTTP_STATUS_CODE_NOT_FOUND
-from timesketch.lib.definitions import METRICS_NAMESPACE
-
+from timesketch.lib.definitions import HTTP_STATUS_CODE_NOT_FOUND, METRICS_NAMESPACE
 
 # Setup logging
 es_logger = logging.getLogger("timesketch.opensearch")
@@ -1083,3 +1081,21 @@ class OpenSearchDataStore(object):
 
         self.import_events = []
         return return_dict
+
+    def resolve_index_alias(self, searchindex_id: str) -> tuple:
+        """Resolve the alias of an index.
+
+        Returns:
+            A tuple in the following order:
+                - The searchindex_id e.g. alias name
+                - The index of the document
+        """
+        try:
+            index_name = (
+                self.client.indices.resolve_index(searchindex_id)
+                .get("indices")[0]
+                .get("aliases")[0]
+            )
+            return index_name, searchindex_id
+        except TypeError:
+            return searchindex_id, searchindex_id

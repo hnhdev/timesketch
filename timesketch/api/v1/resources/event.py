@@ -251,6 +251,12 @@ class EventResource(resources.ResourceMixin, Resource):
             )
 
         searchindex_id = args.get("searchindex_id")
+
+        # In case the index is part of an alias index, the alias name is used as searchindex
+        searchindex_id, searchindex_name = self.datastore.resolve_index_alias(
+            searchindex_id
+        )
+
         searchindex = SearchIndex.query.filter_by(index_name=searchindex_id).first()
         if not searchindex:
             abort(
@@ -278,7 +284,7 @@ class EventResource(resources.ResourceMixin, Resource):
                 "of indices".format(searchindex_id),
             )
 
-        result = self.datastore.get_event(searchindex_id, event_id)
+        result = self.datastore.get_event(searchindex_name, event_id)
 
         event = Event.query.filter_by(
             sketch=sketch, searchindex=searchindex, document_id=event_id
@@ -807,6 +813,10 @@ class EventAnnotationResource(resources.ResourceMixin, Resource):
 
         for _event in events:
             searchindex_id = _event["_index"]
+            # In case the index is part of an alias index, the alias name is used as searchindex
+            searchindex_id, searchindex_name = self.datastore.resolve_index_alias(
+                searchindex_id
+            )
             searchindex = SearchIndex.query.filter_by(index_name=searchindex_id).first()
             event_id = _event["_id"]
 
@@ -833,7 +843,7 @@ class EventAnnotationResource(resources.ResourceMixin, Resource):
                 )
                 event.comments.append(annotation)
                 self.datastore.set_label(
-                    searchindex_id,
+                    searchindex_name,
                     event_id,
                     sketch.id,
                     current_user.id,
@@ -859,7 +869,7 @@ class EventAnnotationResource(resources.ResourceMixin, Resource):
                     toggle = True
 
                 self.datastore.set_label(
-                    searchindex_id,
+                    searchindex_name,
                     event_id,
                     sketch.id,
                     current_user.id,
@@ -1006,6 +1016,10 @@ class EventAnnotationResource(resources.ResourceMixin, Resource):
         annotation_id = args.get("annotation_id")
         event_id = args.get("event_id")
         searchindex_id = args.get("searchindex_id")
+        # In case the index is part of an alias index, the alias name is used as searchindex
+        searchindex_id, searchindex_name = self.datastore.resolve_index_alias(
+            searchindex_id
+        )
 
         sketch = self._get_sketch(sketch_id)
 
@@ -1048,7 +1062,7 @@ class EventAnnotationResource(resources.ResourceMixin, Resource):
                 # Remove label __ts_comment if the event has no more comments
                 if len(event.comments) < 1:
                     self.datastore.set_label(
-                        searchindex_id,
+                        searchindex_name,
                         event_id,
                         sketch.id,
                         current_user.id,
@@ -1321,12 +1335,15 @@ class EventUnTagResource(resources.ResourceMixin, Resource):
             searchindex = None
             # in both cases we are flexible, no matter what was supplied
             if searchindex_name:
+                # In case the index is part of an alias index, the alias name is used as searchindex
+                searchindex_id, searchindex_name = self.datastore.resolve_index_alias(
+                    searchindex_name
+                )
                 searchindex = SearchIndex.query.filter_by(
-                    index_name=searchindex_name
+                    index_name=searchindex_id
                 ).first()
             elif searchindex_id:
                 searchindex = SearchIndex.get_by_id(searchindex_id)
-
             if not searchindex:
                 abort(
                     HTTP_STATUS_CODE_BAD_REQUEST,
@@ -1339,7 +1356,7 @@ class EventUnTagResource(resources.ResourceMixin, Resource):
                     "Unable to query event on a closed search index.",
                 )
 
-            result = self.datastore.get_event(searchindex.index_name, _event.get("_id"))
+            result = self.datastore.get_event(searchindex_name, _event.get("_id"))
             if not result:
                 logger.debug(
                     "Unable to find event %s in index %s to untag",
@@ -1356,7 +1373,7 @@ class EventUnTagResource(resources.ResourceMixin, Resource):
 
             # write the new tags to the datastore
             datastore.import_event(
-                index_name=searchindex.index_name,
+                index_name=searchindex_name,
                 event_id=_event.get("_id"),
                 event={"tag": new_tags},
                 flush_interval=datastore.DEFAULT_FLUSH_INTERVAL,
