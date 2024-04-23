@@ -532,12 +532,7 @@ export default {
 
       this.currentQueryFilter.chips = [startChip, endChip]
 
-      let isLegacy = this.meta.indices_metadata[this.contextEvent._index].is_legacy
-      if (isLegacy) {
-        this.currentQueryFilter.indices = [this.contextEvent._index]
-      } else {
-        this.currentQueryFilter.indices = [this.contextEvent._source.__ts_timeline_id]
-      }
+      this.currentQueryFilter.indices = [this.contextEvent._source.__ts_timeline_id]
       this.currentQueryFilter.size = numContextEvents
       this.search()
     },
@@ -666,12 +661,7 @@ export default {
       if (this.currentQueryFilter.indices[0] === '_all' || this.currentQueryFilter.indices === '_all') {
         let allIndices = []
         this.sketch.active_timelines.forEach((timeline) => {
-          let isLegacy = this.meta.indices_metadata[timeline.searchindex.index_name].is_legacy
-          if (isLegacy) {
-            allIndices.push(timeline.searchindex.index_name)
-          } else {
-            allIndices.push(timeline.id)
-          }
+          allIndices.push(timeline.id)
         })
         this.currentQueryFilter.indices = allIndices
       }
@@ -758,12 +748,7 @@ export default {
         return timeline.id === parseInt(this.params.indexName, 10)
       })
 
-      let isLegacy = this.meta.indices_metadata[timeline.searchindex.index_name].is_legacy
-      if (isLegacy) {
-        this.currentQueryFilter.indices = [timeline.searchindex.index_name]
-      } else {
-        this.currentQueryFilter.indices = [timeline.id]
-      }
+      this.currentQueryFilter.indices = [timeline.id]
       doSearch = true
     }
 
