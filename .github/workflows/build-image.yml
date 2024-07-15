@@ -26,4 +26,4 @@ jobs:
           file: Dockerfile-notebook
           build-args: |
             BRANCH=${{ github.head_ref }}
-          build-contexts: timesketch_api_client=../../api_client/
+          build-contexts: timesketch_api_client=api_client/
