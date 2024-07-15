@@ -22,8 +22,8 @@ jobs:
       - name: Build Jupyter Labs Docker image
         uses: docker/build-push-action@v4
         with:
-          context: docker/release/build
-          file: docker/release/build/Dockerfile-notebook
+          context: docker/dev/build
+          file: docker/dev/build/Dockerfile-notebook
           build-args: |
             BRANCH=${{ github.head_ref }}
           build-contexts: timesketch_api_client=api_client/
