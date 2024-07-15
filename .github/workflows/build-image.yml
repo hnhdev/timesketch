@@ -5,7 +5,7 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  build-timesketch-image:
+  build-timesketch-images:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,7 +23,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: docker/release/build
-          file: Dockerfile-notebook
+          file: docker/release/build/Dockerfile-notebook
           build-args: |
             BRANCH=${{ github.head_ref }}
           build-contexts: timesketch_api_client=api_client/
