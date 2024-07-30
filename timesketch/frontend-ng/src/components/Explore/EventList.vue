@@ -70,7 +70,7 @@ limitations under the License.
 
                 <v-card class="pa-4">
                   <h3>Save Search</h3>
-                  <br />
+                  <br/>
                   <v-text-field
                     clearable
                     v-model="saveSearchFormName"
@@ -324,7 +324,7 @@ limitations under the License.
                 <b>data_type</b>:<code>{{ item._source.data_type }}</code>
               </span>
               <span v-for="(value, key) in item._source" v-bind:key="key">
-                <span v-if="isIncluded(key)">
+                <span v-if="isIncluded(key, value)">
                   <b>{{ key }}</b>:<code>{{ value }}</code>
                 </span>
               </span>
@@ -664,11 +664,18 @@ export default {
         'background-color': backgroundColor,
       }
     },
-    isIncluded(key) {
-      const hideKeys = ["datetime", "timestamp_desc", "tag", "label", "comment", "tag", "label", "data_type"]
-      if (key.startsWith("__") || hideKeys.includes(key)) {
+    isIncluded(key, value) {
+      const hiddenKeys = ["datetime", "timestamp_desc", "tag", "label", "comment", "tag", "label", "data_type", "domain", "hostname"];
+      const regEx = /^[0-9]+-[0-9]+-[0-9]+[T][0-9]+[:][0-9]+[:][0-9]+/gm;
+      if (key.startsWith("__") || hiddenKeys.includes(key)) {
+        console.log(regEx.exec(value))
         return false
-      } else {
+      }
+      // Filter keys thath contain ISO-8610 format 
+      else if (regEx.exec(value)) {
+        return false
+      }
+      else {
         return true
       }
     },
@@ -954,6 +961,7 @@ export default {
   display: -moz-flex;
   display: flex;
   vertical-align: text-bottom !important;
+  overflow-wrap: anywhere !important;
 }
 
 .ts-event-field-line-clamp {
