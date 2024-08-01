@@ -155,10 +155,38 @@ limitations under the License.
                   <small>{{ fromEvent }}-{{ toEvent }} of {{ totalHits }} events ({{ totalTime }}s)</small>
                 </span>
 
-                <v-dialog v-model="saveSearchMenu" v-if="!disableSaveSearch" width="500">
-                  <template v-slot:activator="{ on, attrs }">
-                    <v-btn icon v-bind="attrs" v-on="on">
-                      <v-icon title="Save current search">mdi-content-save-outline</v-icon>
+              <v-dialog v-model="saveSearchMenu" v-if="!disableSaveSearch" width="500">
+                <template v-slot:activator="{ on, attrs }">
+                  <v-btn icon v-bind="attrs" v-on="on">
+                    <v-icon title="Save current search">mdi-content-save-outline</v-icon>
+                  </v-btn>
+                </template>
+
+                <v-card class="pa-4">
+                  <h3>Save Search</h3>
+                  <br/>
+                  <v-text-field
+                    clearable
+                    v-model="saveSearchFormName"
+                    required
+                    placeholder="Name your saved search"
+                    outlined
+                    dense
+                    autofocus
+                    @focus="$event.target.select()"
+                    :rules="saveSearchNameRules"
+                  >
+                  </v-text-field>
+                  <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn text @click="saveSearchMenu = false"> Cancel </v-btn>
+                    <v-btn
+                      text
+                      color="primary"
+                      @click="saveSearch"
+                      :disabled="!saveSearchFormName || saveSearchFormName.length > 255"
+                    >
+                      Save
                     </v-btn>
                   </template>
 
@@ -553,7 +581,7 @@ limitations under the License.
                 <b>data_type</b>:<code>{{ item._source.data_type }}</code>
               </span>
               <span v-for="(value, key) in item._source" v-bind:key="key">
-                <span v-if="isIncluded(key)">
+                <span v-if="isIncluded(key, value)">
                   <b>{{ key }}</b>:<code>{{ value }}</code>
                 </span>
               </span>
@@ -909,11 +937,18 @@ export default {
         'background-color': backgroundColor,
       }
     },
-    isIncluded(key) {
-      const hideKeys = ["datetime", "timestamp_desc", "tag", "label", "comment", "tag", "label", "data_type"]
-      if (key.startsWith("__") || hideKeys.includes(key)) {
+    isIncluded(key, value) {
+      const hiddenKeys = ["datetime", "timestamp_desc", "tag", "label", "comment", "tag", "label", "data_type", "domain", "hostname"]
+      const regEx = /^[0-9]+-[0-9]+-[0-9]+[T][0-9]+[:][0-9]+[:][0-9]+/gm
+      if (key.startsWith("__") || hiddenKeys.includes(key)) {
+        console.log(regEx.exec(value))
         return false
-      } else {
+      }
+      // Filter keys that contain ISO-8610 format 
+      else if (regEx.exec(value)) {
+        return false
+      }
+      else {
         return true
       }
     },
@@ -1255,6 +1290,7 @@ export default {
 
 .ts-event-field-line-clamp {
   overflow: hidden;
+  word-break: break-all !important;
   display: -webkit-box;
   /* number of lines to show */
   -webkit-line-clamp: 3;
