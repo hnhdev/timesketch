@@ -665,13 +665,13 @@ export default {
       }
     },
     isIncluded(key, value) {
-      const hiddenKeys = ["datetime", "timestamp_desc", "tag", "label", "comment", "tag", "label", "data_type", "domain", "hostname"];
-      const regEx = /^[0-9]+-[0-9]+-[0-9]+[T][0-9]+[:][0-9]+[:][0-9]+/gm;
+      const hiddenKeys = ["datetime", "timestamp_desc", "tag", "label", "comment", "tag", "label", "data_type", "domain", "hostname"]
+      const regEx = /^[0-9]+-[0-9]+-[0-9]+[T][0-9]+[:][0-9]+[:][0-9]+/gm
       if (key.startsWith("__") || hiddenKeys.includes(key)) {
         console.log(regEx.exec(value))
         return false
       }
-      // Filter keys thath contain ISO-8610 format 
+      // Filter keys that contain ISO-8610 format 
       else if (regEx.exec(value)) {
         return false
       }
@@ -961,11 +961,11 @@ export default {
   display: -moz-flex;
   display: flex;
   vertical-align: text-bottom !important;
-  overflow-wrap: anywhere !important;
 }
 
 .ts-event-field-line-clamp {
   overflow: hidden;
+  word-break: break-all !important;
   display: -webkit-box;
   /* number of lines to show */
   -webkit-line-clamp: 3;
