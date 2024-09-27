@@ -51,8 +51,6 @@ setup(
     zip_safe=False,
     install_requires=frozenset(
         [
-            "pandas[performance,plot-output-formatting]",
-            "mitreattack-python",
             "cryptography",
             "requests",
             "altair",
