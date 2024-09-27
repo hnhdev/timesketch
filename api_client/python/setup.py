@@ -51,6 +51,7 @@ setup(
     zip_safe=False,
     install_requires=frozenset(
         [
+            "pandas",
             "cryptography",
             "requests",
             "altair",
