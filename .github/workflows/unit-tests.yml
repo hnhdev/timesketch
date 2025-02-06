@@ -3,7 +3,7 @@ name: unit-tests
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -13,8 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [ubuntu-20.04]
-        python-version: ['3.10']
+        os: [ubuntu-22.04]
+        python-version: ["3.10"]
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
@@ -25,10 +25,12 @@ jobs:
         run: |
           pip install pipenv
           pipenv install -d
-          pipenv install -r test_requirements.txt
+          pipenv run pip install -r test_requirements.txt
+      - name: Check pytest installation
+        run: pipenv run pip show pytest
       - name: Run unit tests
         run: |
-          pipenv run python run_tests.py
+          pipenv run python3 run_tests.py
 
   # Frontend tests (VueJS)
   VueJS:
@@ -38,7 +40,7 @@ jobs:
         working-directory: timesketch/frontend-ng
     strategy:
       matrix:
-        os: [ubuntu-20.04, ubuntu-22.04]
+        os: [ubuntu-22.04]
         node-version: ["18"]
     steps:
       - uses: actions/checkout@v2
