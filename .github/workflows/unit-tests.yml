@@ -1,6 +1,12 @@
 name: unit-tests
 
 on:
+<<<<<<< HEAD
+=======
+  push:
+    branches:
+      - main
+>>>>>>> ed6fd1a2 (Rename default branch to `main` (#43))
   pull_request:
     types: [opened, synchronize, reopened]
     paths-ignore:
