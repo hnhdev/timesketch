@@ -1127,9 +1127,7 @@ class Search(resource.SketchResource):
 
         data_frame = pandas.DataFrame(return_list)
         try:
-            data_frame["datetime"] = pandas.to_datetime(
-                data_frame.datetime, format="ISO8601", utc=True
-            )
+            data_frame["datetime"] = pandas.to_datetime(data_frame.datetime, utc=True)
         except pandas.errors.OutOfBoundsDatetime:
             pass
 
