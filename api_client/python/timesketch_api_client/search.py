@@ -1130,6 +1130,8 @@ class Search(resource.SketchResource):
             data_frame["datetime"] = pandas.to_datetime(
                 data_frame.datetime, utc=True, format="ISO8601", errors="coerce"
             )
+        except AttributeError:
+            pass
         except pandas.errors.OutOfBoundsDatetime:
             pass
 
