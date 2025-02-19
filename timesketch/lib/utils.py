@@ -15,6 +15,7 @@
 
 from __future__ import unicode_literals
 
+import codecs
 import colorsys
 import csv
 import datetime
@@ -24,11 +25,9 @@ import logging
 import random
 import smtplib
 import time
-import codecs
 
 import pandas
 import six
-
 from dateutil import parser
 from flask import current_app
 from pandas import Timestamp
@@ -526,11 +525,10 @@ def read_and_validate_jsonl(
             )
 
 
-def get_validated_indices(indices, sketch):
+def get_validated_indices(sketch):
     """Exclude any deleted search index references.
 
     Args:
-        indices: List of indices from the user
         sketch: A sketch object (instance of models.sketch.Sketch).
 
     Returns:
@@ -551,31 +549,18 @@ def get_validated_indices(indices, sketch):
             }
         )
 
-    sketch_indices = set(sketch_structure.keys())
-    exclude = set(indices) - sketch_indices
     timelines = set()
+    indices = []
 
-    if exclude:
-        indices = [index for index in indices if index not in exclude]
-        for item in exclude:
-            for index, timeline_list in sketch_structure.items():
-                for timeline_struct in timeline_list:
-                    timeline_id = timeline_struct.get("id")
-                    timeline_name = timeline_struct.get("name")
+    for index, timeline_list in sketch_structure.items():
+        for timeline_struct in timeline_list:
+            timeline_id = timeline_struct.get("id")
 
-                    if not timeline_id:
-                        continue
+            if not timeline_id:
+                continue
 
-                    if isinstance(item, str) and item.isdigit():
-                        item = int(item)
-
-                    if item == timeline_id:
-                        timelines.add(timeline_id)
-                        indices.append(index)
-
-                    if isinstance(item, str) and item.lower() == timeline_name.lower():
-                        timelines.add(timeline_id)
-                        indices.append(index)
+            timelines.add(timeline_id)
+            indices.append(index)
 
     return list(set(indices)), list(timelines)
 
