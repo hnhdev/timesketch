@@ -50,10 +50,10 @@ class TestUtils(BaseTest):
 
         valid_indices = ["test"]
         invalid_indices = ["test", "fail"]
-        test_indices, _ = get_validated_indices(sketch)
+        test_indices, _ = get_validated_indices(valid_indices, sketch)
         self.assertListEqual(sketch_indices, test_indices)
 
-        test_indices, _ = get_validated_indices(sketch)
+        test_indices, _ = get_validated_indices(invalid_indices, sketch)
         self.assertFalse("fail" in test_indices)
 
     def test_header_validation(self):

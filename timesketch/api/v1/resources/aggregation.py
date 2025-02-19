@@ -16,24 +16,30 @@
 import json
 import time
 
-from flask import abort, jsonify, request
-from flask_login import current_user, login_required
-from flask_restful import Resource, marshal
 from opensearchpy.exceptions import NotFoundError
 
-from timesketch.api.v1 import resources, utils
+from flask import jsonify
+from flask import request
+from flask import abort
+from flask_restful import marshal
+from flask_restful import Resource
+from flask_login import login_required
+from flask_login import current_user
+
+from timesketch.api.v1 import resources
+from timesketch.api.v1 import utils
 from timesketch.lib import forms
 from timesketch.lib import utils as lib_utils
+from timesketch.lib.definitions import HTTP_STATUS_CODE_OK
+from timesketch.lib.definitions import HTTP_STATUS_CODE_CREATED
+from timesketch.lib.definitions import HTTP_STATUS_CODE_BAD_REQUEST
+from timesketch.lib.definitions import HTTP_STATUS_CODE_FORBIDDEN
+from timesketch.lib.definitions import HTTP_STATUS_CODE_NOT_FOUND
 from timesketch.lib.aggregators import manager as aggregator_manager
-from timesketch.lib.definitions import (
-    HTTP_STATUS_CODE_BAD_REQUEST,
-    HTTP_STATUS_CODE_CREATED,
-    HTTP_STATUS_CODE_FORBIDDEN,
-    HTTP_STATUS_CODE_NOT_FOUND,
-    HTTP_STATUS_CODE_OK,
-)
 from timesketch.models import db_session
-from timesketch.models.sketch import Aggregation, AggregationGroup, Sketch
+from timesketch.models.sketch import Aggregation
+from timesketch.models.sketch import AggregationGroup
+from timesketch.models.sketch import Sketch
 
 
 class AggregationResource(resources.ResourceMixin, Resource):
@@ -476,7 +482,7 @@ class AggregationExploreResource(resources.ResourceMixin, Resource):
                 aggregator_parameters = {}
 
             indices = aggregator_parameters.pop("index", sketch_indices)
-            indices, timeline_ids = lib_utils.get_validated_indices(sketch)
+            indices, timeline_ids = lib_utils.get_validated_indices(indices, sketch)
 
             if not (indices or timeline_ids):
                 abort(HTTP_STATUS_CODE_BAD_REQUEST, "No indices to aggregate on")
