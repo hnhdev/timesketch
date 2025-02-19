@@ -19,36 +19,16 @@ If you see the following message you can continue
 Timesketch development server is ready!
 ```
 
-### Find out container ID for the timesketch container
-
-```
-CONTAINER_ID="$(docker container list -f name=timesketch -q)"
-```
-
-In the output look for CONTAINER ID for the timesketch container
-
-To write the ID to a variable, use:
-
-```
-export CONTAINER_ID="$(docker container list -f name=timesketch -q)"
-```
-
-and test with
-
-```
-echo $CONTAINER_ID
-```
-
 ### Start a celery container shell
 
 ```
-docker exec -it $CONTAINER_ID celery -A timesketch.lib.tasks worker --loglevel info
+docker exec -it timesketch celery -A timesketch.lib.tasks worker --loglevel info
 ```
 
 ### Start development webserver (and metrics server)
 
 ```
-docker exec -it $CONTAINER_ID gunicorn --reload -b 0.0.0.0:5000 --log-file - --timeout 600 -c /usr/local/src/timesketch/data/gunicorn_config.py timesketch.wsgi:application
+docker exec -it timesketch gunicorn --reload -b 0.0.0.0:5000 --log-file - --timeout 600 -c /usr/local/src/timesketch/data/gunicorn_config.py timesketch.wsgi:application
 ```
 
 You now can access your development version at <http://127.0.0.1:5000/>
@@ -62,15 +42,14 @@ You can also access a metrics dashboard at <http://127.0.0.1:3000/>
 Running the following as a script after `docker compose up -d` will bring up the development environment in the background for you.
 
 ```
-export CONTAINER_ID="$(docker container list -f name=timesketch -q)"
-docker exec $CONTAINER_ID celery -A timesketch.lib.tasks worker --loglevel info
-docker exec $CONTAINER_ID gunicorn --reload -b 0.0.0.0:5000 --log-file - --timeout 120 timesketch.wsgi:application
+docker exec timesketch celery -A timesketch.lib.tasks worker --loglevel info
+docker exec timesketch gunicorn --reload -b 0.0.0.0:5000 --log-file - --timeout 120 timesketch.wsgi:application
 ```
 
 ### Run tests
 
 ```
-docker exec -w /usr/local/src/timesketch -it $CONTAINER_ID python3 run_tests.py --coverage
+docker exec -w /usr/local/src/timesketch -it timesketch python3 run_tests.py --coverage
 ```
 
 That will run all tests in your docker container. It is recommended to run all tests at least before creating a pull request.

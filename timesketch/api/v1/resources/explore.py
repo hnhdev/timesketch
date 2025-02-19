@@ -150,7 +150,7 @@ class ExploreResource(resources.ResourceMixin, Resource):
 
         # Make sure that the indices in the filter are part of the sketch.
         # This will also remove any deleted timeline from the search result.
-        indices, timeline_ids = get_validated_indices(indices, sketch)
+        indices, timeline_ids = get_validated_indices(sketch)
 
         # Remove indices that don't exist from search.
         indices = utils.validate_indices(indices, self.datastore)
