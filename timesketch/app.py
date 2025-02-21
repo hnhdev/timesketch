@@ -20,10 +20,8 @@ import os
 import sys
 
 import six
-
-from flask import Flask
 from celery import Celery
-
+from flask import Flask
 from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_restful import Api
@@ -31,32 +29,24 @@ from flask_wtf import CSRFProtect
 
 from timesketch.api.v1.routes import API_ROUTES as V1_API_ROUTES
 from timesketch.lib.errors import ApiHTTPError
-from timesketch.models import configure_engine
-from timesketch.models import init_db
+from timesketch.models import configure_engine, init_db
 from timesketch.models.user import User
 from timesketch.views.auth import auth_views
 from timesketch.views.spa import spa_views
 
 
-def create_app(config=None, legacy_ui=False):
+def create_app(config=None):
     """Create the Flask app instance that is used throughout the application.
 
     Args:
         config: Path to configuration file as a string or an object with config
         directives.
-        legacy_ui: Temporary flag to indicate to serve the old UI.
-            TODO: Remove this when the old UI has been removed.
 
     Returns:
         Application object (instance of flask.Flask).
     """
     template_folder = "frontend-ng/dist"
     static_folder = "frontend-ng/dist"
-
-    # Serve the old UI.
-    if legacy_ui:
-        template_folder = "frontend/dist"
-        static_folder = "frontend/dist"
 
     app = Flask(__name__, template_folder=template_folder, static_folder=static_folder)
 
@@ -119,7 +109,7 @@ def create_app(config=None, legacy_ui=False):
     # Plaso version that we support
     if app.config["UPLOAD_ENABLED"]:
         try:
-            # pylint: disable=import-outside-toplevel
+
             from plaso import __version__ as plaso_version
 
             app.config["PLASO_VERSION"] = plaso_version
@@ -147,7 +137,7 @@ def create_app(config=None, legacy_ui=False):
         api_v1.add_resource(*route)
 
     # Register error handlers
-    # pylint: disable=unused-variable
+
     @app.errorhandler(ApiHTTPError)
     def handle_api_http_error(error):
         """Error handler for API HTTP errors.
@@ -163,7 +153,7 @@ def create_app(config=None, legacy_ui=False):
     login_manager.login_view = "user_views.login"
 
     # This is used by the flask_login extension.
-    # pylint: disable=unused-variable
+
     @login_manager.user_loader
     def load_user(user_id):
         """Based on a user_id (database primary key for a user) this function
@@ -212,7 +202,6 @@ def create_celery_app():
     celery.conf.update(app.config)
     TaskBase = celery.Task
 
-    # pylint: disable=no-init
     class ContextTask(TaskBase):
         """Add Flask context to the Celery tasks created."""
 
