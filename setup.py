@@ -71,6 +71,7 @@ timesketch_description = (
 
 setup(
     name="timesketch",
+    version=version.get_version(),
     description="Digital forensic timeline analysis",
     long_description=timesketch_description,
     license="Apache License, Version 2.0",
