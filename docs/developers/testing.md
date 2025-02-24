@@ -102,6 +102,7 @@ While writing end2end tests one approach to make it easier to develop these e2e 
 The following example is for changing / adding tests to `client_test.py`
 
 ```shell
+$ export CONTAINER_ID="$(sudo -E docker container list -f name=e2e_timesketch -q)"
 $ docker exec -it timesketch /bin/bash
 ! rm /usr/local/lib/python3.10/dist-packages/end_to_end_tests/client_test.py
 ! ln -s /usr/local/src/timesketch/end_to_end_tests/client_test.py /usr/local/lib/python3.10/dist-packages/end_to_end_tests/client_test.py

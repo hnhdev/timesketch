@@ -1,11 +1,6 @@
-## Docker for development
+# Docker for development
 
-You can run Timesketch on Docker in development mode.
-Make sure to follow the docker [post-install](https://docs.docker.com/engine/install/linux-postinstall/) to run without superuser. If not then make sure to execute all `docker` commands here as *superuser*.
-
-NOTE: It is not recommended to try to run on a system with less than 8 GB of RAM.
-
-### Start a developer version of docker containers in this directory
+## Start the deployment
 
 ```
 docker compose up -d
@@ -34,8 +29,6 @@ docker exec -it timesketch gunicorn --reload -b 0.0.0.0:5000 --log-file - --time
 You now can access your development version at <http://127.0.0.1:5000/>
 
 Log in with user: dev password: dev
-
-You can also access a metrics dashboard at <http://127.0.0.1:3000/>
 
 ### Non-interactive
 
@@ -92,9 +85,3 @@ And the importer client:
 
 Just remember to restart the kernel runtime in order for the changes to be
 active.
-
-To update the docker image run:
-
-```shell
-sudo docker image pull us-docker.pkg.dev/osdfir-registry/timesketch/notebook:latest
-```
