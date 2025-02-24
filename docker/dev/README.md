@@ -35,7 +35,6 @@ Log in with user: dev password: dev
 Running the following as a script after `docker compose up -d` will bring up the development environment in the background for you.
 
 ```
-export CONTAINER_ID="$(docker container list -f name=timesketch -q)"
 docker exec timesketch celery -A timesketch.lib.tasks worker --loglevel info
 docker exec timesketch gunicorn --reload -b 0.0.0.0:5000 --log-file - --timeout 120 timesketch.wsgi:application
 ```
