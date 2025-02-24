@@ -89,15 +89,13 @@ class MockOpenSearchClient(object):
         """Initialize the client."""
         self.indices = MockOpenSearchIndices()
 
-    def search(
-        self, index, body, size=0, search_type=None
-    ):  # pylint: disable=unused-argument
+    def search(self, index, body, size=0, search_type=None):
         """Mock a client search.
 
         Used for testing both aggregations and adding event attributes.
 
         """
-        # pylint: disable=line-too-long
+
         aggregation_search_result = {
             "meta": {
                 "es_time": 23,
@@ -127,7 +125,6 @@ class MockOpenSearchClient(object):
                 }
             ],
         }
-        # pylint: enable=line-too-long
 
         add_attributes_search_result = {
             "hits": {
@@ -154,7 +151,7 @@ class MockOpenSearchClient(object):
 
 
 class MockOpenSearchIndices(object):
-    # pylint: disable=unused-argument
+
     def get_mapping(self, *args, **kwargs):
         """Mock get mapping call."""
         return {}
@@ -232,7 +229,6 @@ class MockDataStore(object):
         # Dictionary containing event dictionaries.
         self.event_store = {}
 
-    # pylint: disable=arguments-differ,unused-argument
     def search(self, *args, **kwargs):
         """Mock a search query.
         Returns:
@@ -292,7 +288,6 @@ class MockDataStore(object):
         """Mock adding a label to an event."""
         return
 
-    # pylint: disable=unused-argument
     def create_index(self, *args, **kwargs):
         """Mock creating an index."""
         return
@@ -328,7 +323,6 @@ class MockDataStore(object):
         """
         return "6.0"
 
-    # pylint: disable=unused-argument
     def search_stream(
         self,
         query_string,
@@ -405,7 +399,6 @@ class MockGraphDatabase(object):
             self.rows = {}
             self.stats = {}
 
-    # pylint: disable=unused-argument
     def query(self, *args, **kwargs):
         """Mock a search query.
         Returns:

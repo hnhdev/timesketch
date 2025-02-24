@@ -4,7 +4,7 @@ import datetime
 import json
 import logging
 import re
-from typing import Dict, List, Optional, Union, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 import requests
 import yaml
@@ -500,7 +500,7 @@ class YetiBaseAnalyzer(interface.BaseAnalyzer):
                         indicator["id"],
                         str(datetime.datetime.now() - start),
                     )
-                except Exception as exception:  # pylint: disable=broad-except
+                except Exception as exception:
                     # No matter the exception, we don't want to stop the
                     # analyzer. Errors are logged and reported in the UI.
                     logging.error(

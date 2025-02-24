@@ -647,7 +647,7 @@ class Search(resource.SketchResource):
         self._execute_query(count=True)
         return self._total_elastic_size
 
-    def from_manual(  # pylint: disable=arguments-differ
+    def from_manual(
         self,
         query_string=None,
         query_dsl=None,
@@ -705,7 +705,7 @@ class Search(resource.SketchResource):
 
         self.resource_data = {}
 
-    def from_saved(self, search_id):  # pylint: disable=arguments-differ
+    def from_saved(self, search_id):
         """Initialize the search object from a saved search.
 
         Args:
