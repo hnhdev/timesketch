@@ -30,6 +30,7 @@ from .resources.analysis import (
     AnalyzerSessionResource,
 )
 from .resources.archive import SketchArchiveResource
+from .resources.attribute import AttributeResource
 from .resources.contextlinks import ContextLinkConfigResource
 from .resources.datafinder import DataFinderResource
 from .resources.datasource import DataSourceListResource, DataSourceResource
@@ -109,7 +110,7 @@ from .resources.view import ViewListResource, ViewResource
 
 # Disable error for long line. Readability is more important than line
 # length in this case.
-
+# pylint: disable=line-too-long
 API_ROUTES = [
     (SketchListResource, "/sketches/"),
     (SketchResource, "/sketches/<int:sketch_id>/"),
