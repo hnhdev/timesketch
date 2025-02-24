@@ -47,7 +47,7 @@ docker exec -it timesketch gunicorn --reload -b 0.0.0.0:5000 --log-file - --time
 2. Start the development webserver in the second shell:
 
 ```bash
-docker  exec timesketch yarn run --cwd=/usr/local/src/timesketch/timesketch/frontend-ng serve
+docker exec timesketch yarn run --cwd=/usr/local/src/timesketch/timesketch/frontend-ng serve
 ```
 
 This will spawn a listener on port `5001`. Point your browser to `http://localhost:5001/login`, login with your
