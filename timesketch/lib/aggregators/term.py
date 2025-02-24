@@ -14,8 +14,7 @@
 """Term aggregations."""
 
 
-from timesketch.lib.aggregators import manager
-from timesketch.lib.aggregators import interface
+from timesketch.lib.aggregators import interface, manager
 
 
 def get_spec(field, limit=10, query="", query_dsl=""):
@@ -129,7 +128,6 @@ class FilteredTermsAggregation(interface.BaseAggregator):
             return f'Top filtered results for "{self.field:s}"'
         return "Top results for an unknown field after filtering"
 
-    # pylint: disable=arguments-differ
     def run(
         self,
         field: str,

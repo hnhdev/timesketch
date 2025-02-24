@@ -1,11 +1,12 @@
 """The sketch analyzer for chained events."""
 
+from __future__ import unicode_literals
+
 import collections
 import uuid
 
 from timesketch.lib import emojis
-from timesketch.lib.analyzers import interface
-from timesketch.lib.analyzers import manager
+from timesketch.lib.analyzers import chain_plugins, interface, manager
 from timesketch.lib.analyzers.chain_plugins import manager as chain_manager
 
 
@@ -126,11 +127,15 @@ class ChainSketchPlugin(interface.BaseAnalyzer):
             event.commit()
 
         chain_string = " - ".join(
-            [f"[{x[0]:s}] {x[1]:d}" for x in counter.most_common() if x[0] != "total"]
+            [
+                "[{0:s}] {1:d}".format(x[0], x[1])
+                for x in counter.most_common()
+                if x[0] != "total"
+            ]
         )
         return (
-            "{:d} base events annotated with a chain UUID for {:d} "
-            "chains for a total of {:d} events. {:s}".format(
+            "{0:d} base events annotated with a chain UUID for {1:d} "
+            "chains for a total of {2:d} events. {3:s}".format(
                 number_of_base_events, number_of_chains, counter["total"], chain_string
             )
         )

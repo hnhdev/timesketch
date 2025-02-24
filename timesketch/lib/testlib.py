@@ -13,30 +13,29 @@
 # limitations under the License.
 """This module contains common test utilities for Timesketch."""
 
+from __future__ import unicode_literals
 
 import codecs
 import json
+from re import search
 
-from typing import Optional, Dict
+import six
 from flask_testing import TestCase
-from sqlalchemy import create_engine
-
 
 from timesketch.app import create_app
 from timesketch.lib.definitions import HTTP_STATUS_CODE_REDIRECT
-from timesketch.models import init_db
-from timesketch.models import drop_all
-from timesketch.models import db_session, BaseModel
-from timesketch.models.user import Group
-from timesketch.models.user import User
-from timesketch.models.sketch import Sketch
-from timesketch.models.sketch import Timeline
-from timesketch.models.sketch import SearchIndex
-from timesketch.models.sketch import SearchTemplate
-from timesketch.models.sketch import View
-from timesketch.models.sketch import Event
-from timesketch.models.sketch import Story
+from timesketch.models import db_session, drop_all, init_db
 from timesketch.models.sigma import SigmaRule
+from timesketch.models.sketch import (
+    Event,
+    SearchIndex,
+    SearchTemplate,
+    Sketch,
+    Story,
+    Timeline,
+    View,
+)
+from timesketch.models.user import Group, User
 
 SIGMA_RULE = """
 title: Suspicious Installation of Zenmap
@@ -61,7 +60,7 @@ level: high
 """
 
 
-class TestConfig:
+class TestConfig(object):
     """Config for the test environment."""
 
     DEBUG = True
@@ -89,22 +88,20 @@ class TestConfig:
     EXAMPLES_NL2Q = "./tests/test_data/nl2q/test_examples_nl2q"
 
 
-class MockOpenSearchClient:
+class MockOpenSearchClient(object):
     """A mock implementation of a OpenSearch client."""
 
     def __init__(self):
         """Initialize the client."""
         self.indices = MockOpenSearchIndices()
 
-    def search(
-        self, index, body, size=0, search_type=None
-    ):  # pylint: disable=unused-argument
+    def search(self, index, body, size=0, search_type=None):
         """Mock a client search.
 
         Used for testing both aggregations and adding event attributes.
 
         """
-        # pylint: disable=line-too-long
+
         aggregation_search_result = {
             "meta": {
                 "es_time": 23,
@@ -134,7 +131,6 @@ class MockOpenSearchClient:
                 }
             ],
         }
-        # pylint: enable=line-too-long
 
         add_attributes_search_result = {
             "hits": {
@@ -160,8 +156,8 @@ class MockOpenSearchClient:
         return aggregation_search_result
 
 
-class MockOpenSearchIndices:
-    # pylint: disable=unused-argument
+class MockOpenSearchIndices(object):
+
     def get_mapping(self, *args, **kwargs):
         """Mock get mapping call."""
         return {}
@@ -176,7 +172,7 @@ class MockOpenSearchIndices:
         return True
 
 
-class MockDataStore:
+class MockDataStore(object):
     """A mock implementation of a Datastore."""
 
     event_dict = {
@@ -239,7 +235,6 @@ class MockDataStore:
         # Dictionary containing event dictionaries.
         self.event_store = {}
 
-    # pylint: disable=arguments-differ,unused-argument
     def search(self, *args, **kwargs):
         """Mock a search query.
         Returns:
@@ -299,7 +294,6 @@ class MockDataStore:
         """Mock adding a label to an event."""
         return
 
-    # pylint: disable=unused-argument
     def create_index(self, *args, **kwargs):
         """Mock creating an index."""
         return
@@ -335,17 +329,15 @@ class MockDataStore:
         """
         return "6.0"
 
-    # pylint: disable=unused-argument
     def search_stream(
         self,
-        sketch_id: int,
-        indices: list,
-        query_string: str = "",
-        query_filter: Optional[Dict] = None,
-        query_dsl: Optional[Dict] = None,
-        return_fields: Optional[list] = None,
-        enable_scroll: bool = True,
-        timeline_ids: Optional[list] = None,
+        query_string,
+        query_filter,
+        query_dsl,
+        indices,
+        return_fields,
+        enable_scroll=True,
+        timeline_ids=None,
     ):
         for i in range(len(self.event_store)):
             yield self.event_store[str(i)]
@@ -353,8 +345,11 @@ class MockDataStore:
     def flush_queued_events(self):
         """No-op mock to flush_queued_events for the datastore."""
 
+    def resolve_index_alias(self, searchindex_id: str) -> tuple:
+        return searchindex_id, searchindex_id
 
-class MockGraphDatabase:
+
+class MockGraphDatabase(object):
     """A mock implementation of a Datastore."""
 
     def __init__(self, host, username, password):
@@ -368,7 +363,7 @@ class MockGraphDatabase:
         self.username = username
         self.password = password
 
-    class MockQuerySequence:
+    class MockQuerySequence(object):
         """A mock implementation of a QuerySequence."""
 
         MOCK_GRAPH = [
@@ -404,13 +399,12 @@ class MockGraphDatabase:
             self.rows = self.MOCK_ROWS
             self.stats = self.MOCK_ROWS
 
-    class MockEmptyQuerySequence:
+    class MockEmptyQuerySequence(object):
         def __init__(self):
             self.graph = None
             self.rows = {}
             self.stats = {}
 
-    # pylint: disable=unused-argument
     def query(self, *args, **kwargs):
         """Mock a search query.
         Returns:
@@ -579,7 +573,7 @@ class BaseTest(TestCase):
         view = View(
             name=name,
             query_string=name,
-            query_filter=json.dumps({}),
+            query_filter=json.dumps(dict()),
             user=user,
             sketch=sketch,
         )
@@ -595,7 +589,7 @@ class BaseTest(TestCase):
             A search template (timesketch.models.sketch.SearchTemplate)
         """
         searchtemplate = SearchTemplate(
-            name=name, query_string=name, query_filter=json.dumps({}), user=user
+            name=name, query_string=name, query_filter=json.dumps(dict()), user=user
         )
         self._commit_to_database(searchtemplate)
         return searchtemplate
@@ -687,7 +681,7 @@ class BaseTest(TestCase):
         """Authenticate the test user."""
         self.client.post(
             "/login/",
-            data={"username": "test1", "password": "test"},
+            data=dict(username="test1", password="test"),
             follow_redirects=True,
         )
 
@@ -695,7 +689,7 @@ class BaseTest(TestCase):
         """Authenticate the test user with admin privileges."""
         self.client.post(
             "/login/",
-            data={"username": "testadmin", "password": "test"},
+            data=dict(username="testadmin", password="test"),
             follow_redirects=True,
         )
 
@@ -710,7 +704,7 @@ class BaseTest(TestCase):
         response = self.client.get(self.resource_url)
         if response.status_code == 405:
             response = self.client.post(self.resource_url)
-        if isinstance(response.data, bytes):
+        if isinstance(response.data, six.binary_type):
             response_data = codecs.decode(response.data, "utf-8")
         else:
             response_data = response.data
@@ -721,18 +715,9 @@ class BaseTest(TestCase):
 class ModelBaseTest(BaseTest):
     """Base class for database model tests."""
 
-    def setUp(self):
-        super().setUp()  # Call parent setUp if it exists
-        # Configure an in-memory SQLite database for testing
-        self.engine = create_engine("sqlite:///:memory:")
-        # Bind the engine to the session
-        db_session.configure(bind=self.engine)
-        # Create all tables defined in BaseModel.metadata
-        BaseModel.metadata.create_all(self.engine)
-        self.db_session = db_session
-
     def _test_db_object(self, expected_result=None, model_cls=None):
         """Generic test that checks if the stored data is correct."""
         db_obj = model_cls.get_by_id(1)
-        for key, value in expected_result:
-            self.assertEqual(getattr(db_obj, key), value)
+        for x in expected_result:
+            k, v = x[0], x[1]
+            self.assertEqual(db_obj.__getattribute__(k), v)

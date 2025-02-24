@@ -25,7 +25,6 @@ class TestSafeBrowsingSketchPlugin(BaseTest):
         self.assertEqual(analyzer.sketch.id, sketch_id)
 
     @all_requests
-    # pylint: disable=unused-argument,missing-docstring
     def safebrowsing_find_mock(self, url, request):
         MOCK_RESULT = {
             "matches": [
@@ -59,7 +58,6 @@ class TestSafeBrowsingSketchPlugin(BaseTest):
         "timesketch.lib.analyzers.interface.OpenSearchDataStore",
         MockDataStore,
     )
-    # pylint: disable=missing-docstring
     def test_do_safebrowsing_lookup(self):
         index_name = "test"
         sketch_id = 1
@@ -77,7 +75,6 @@ class TestSafeBrowsingSketchPlugin(BaseTest):
                 },
             }
 
-            # pylint: disable=protected-access
             actual_result = analyzer._do_safebrowsing_lookup(
                 ["http://A", "https://B"],
                 [],
@@ -126,12 +123,10 @@ class TestSafeBrowsingSketchPlugin(BaseTest):
 
         for entry, result in URLS:
             self.assertEqual(
-                # pylint: disable=protected-access
                 analyzer._sanitize_url(entry),
                 result,
             )
 
-    # pylint: disable=missing-docstring
     def check_allowlist(self, analyzer):
         ALLOW_LIST = [
             "lorem-*.com",
@@ -140,7 +135,6 @@ class TestSafeBrowsingSketchPlugin(BaseTest):
         ]
 
         self.assertTrue(
-            # pylint: disable=protected-access
             analyzer._is_url_allowlisted(
                 "lorem-ipsum.com",
                 ALLOW_LIST,
@@ -148,7 +142,6 @@ class TestSafeBrowsingSketchPlugin(BaseTest):
         )
 
         self.assertFalse(
-            # pylint: disable=protected-access
             analyzer._is_url_allowlisted(
                 "ipsum.com",
                 ALLOW_LIST,
@@ -156,7 +149,6 @@ class TestSafeBrowsingSketchPlugin(BaseTest):
         )
 
         self.assertTrue(
-            # pylint: disable=protected-access
             analyzer._is_url_allowlisted(
                 "dolor.co.dk",
                 ALLOW_LIST,
@@ -164,7 +156,6 @@ class TestSafeBrowsingSketchPlugin(BaseTest):
         )
 
         self.assertFalse(
-            # pylint: disable=protected-access
             analyzer._is_url_allowlisted(
                 "www.amet.com",
                 ALLOW_LIST,

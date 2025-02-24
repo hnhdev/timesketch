@@ -14,32 +14,24 @@
 """Upload resources for version 1 of the Timesketch API."""
 
 import codecs
+import json
 import logging
 import os
 import uuid
-import json
-from typing import Optional, Dict, List
 
-from flask import jsonify
-from flask import request
-from flask import abort
-from flask import current_app
+from flask import abort, current_app, jsonify, request
+from flask_login import current_user, login_required
 from flask_restful import Resource
-from flask_login import login_required
-from flask_login import current_user
 
-from timesketch.api.v1 import resources
-from timesketch.api.v1 import utils
-from timesketch.lib.definitions import HTTP_STATUS_CODE_CREATED
-from timesketch.lib.definitions import HTTP_STATUS_CODE_BAD_REQUEST
-from timesketch.lib.definitions import HTTP_STATUS_CODE_FORBIDDEN
-from timesketch.lib.definitions import HTTP_STATUS_CODE_NOT_FOUND
+from timesketch.api.v1 import resources, utils
+from timesketch.lib.definitions import (
+    HTTP_STATUS_CODE_BAD_REQUEST,
+    HTTP_STATUS_CODE_CREATED,
+    HTTP_STATUS_CODE_FORBIDDEN,
+    HTTP_STATUS_CODE_NOT_FOUND,
+)
 from timesketch.models import db_session
-from timesketch.models.sketch import SearchIndex
-from timesketch.models.sketch import Sketch
-from timesketch.models.sketch import Timeline
-from timesketch.models.sketch import DataSource
-
+from timesketch.models.sketch import DataSource, SearchIndex, Sketch, Timeline
 
 logger = logging.getLogger("timesketch.api_upload")
 
@@ -48,13 +40,7 @@ class UploadFileResource(resources.ResourceMixin, Resource):
     """Resource that processes uploaded files."""
 
     def _get_index(
-        self,
-        name: str,
-        description: str,
-        sketch: Sketch,
-        index_name: str = "",
-        data_label: str = "",
-        extension: str = "",
+        self, name, description, sketch, index_name="", data_label="", extension=""
     ):
         """Returns a SearchIndex object to be used for uploads.
 
@@ -112,6 +98,7 @@ class UploadFileResource(resources.ResourceMixin, Resource):
         searchindex.grant_permission(permission="read", user=current_user)
         searchindex.grant_permission(permission="write", user=current_user)
         searchindex.grant_permission(permission="delete", user=current_user)
+        searchindex.set_status("processing")
 
         db_session.add(searchindex)
         db_session.commit()
@@ -120,22 +107,21 @@ class UploadFileResource(resources.ResourceMixin, Resource):
 
         return searchindex
 
-    # pylint: disable=too-many-arguments
     def _upload_and_index(
         self,
-        file_extension: str,
-        timeline_name: str,
-        index_name: str,
-        sketch: Sketch,
-        form: Dict,
-        enable_stream: bool,
-        original_filename: str = "",
-        data_label: str = "",
-        file_path: str = "",
-        events: str = "",
-        meta: Optional[Dict] = None,
-        headers_mapping: Optional[List] = None,
-        delimiter: str = ",",
+        file_extension,
+        timeline_name,
+        index_name,
+        sketch,
+        form,
+        enable_stream,
+        original_filename="",
+        data_label="",
+        file_path="",
+        events="",
+        meta=None,
+        headers_mapping=None,
+        delimiter=",",
     ):
         """Creates a full pipeline for an uploaded file and returns the results.
 
@@ -193,8 +179,8 @@ class UploadFileResource(resources.ResourceMixin, Resource):
 
             logger.error(
                 "There is a timeline in the sketch that has the same name "
-                "but is stored in a different index: name {:s} attempting "
-                "index: {:s} but found index {:s} - retrying with a "
+                "but is stored in a different index: name {0:s} attempting "
+                "index: {1:s} but found index {2:s} - retrying with a "
                 "different timeline name.".format(
                     timeline_name,
                     searchindex.index_name,
@@ -202,7 +188,7 @@ class UploadFileResource(resources.ResourceMixin, Resource):
                 )
             )
 
-            timeline_name = f"{timeline_name:s}_{uuid.uuid4().hex[-5:]:s}"
+            timeline_name = "{0:s}_{1:s}".format(timeline_name, uuid.uuid4().hex[-5:])
             return self._upload_and_index(
                 file_extension=file_extension,
                 timeline_name=timeline_name,
@@ -218,6 +204,8 @@ class UploadFileResource(resources.ResourceMixin, Resource):
                 headers_mapping=headers_mapping,
                 delimiter=delimiter,
             )
+
+        searchindex.set_status("processing")
 
         if not timeline:
             timeline = Timeline.get_or_create(
@@ -267,7 +255,7 @@ class UploadFileResource(resources.ResourceMixin, Resource):
         sketch_id = sketch.id
         # Start Celery pipeline for indexing and analysis.
         # Import here to avoid circular imports.
-        # pylint: disable=import-outside-toplevel
+
         from timesketch.lib import tasks
 
         pipeline = tasks.build_index_pipeline(
@@ -321,81 +309,32 @@ class UploadFileResource(resources.ResourceMixin, Resource):
 
     def _upload_file(
         self,
-        file_storage: object,
-        form: Dict,
-        sketch: Sketch,
-        index_name: str,
-        chunk_index_name: str = "",
-        headers_mapping: Optional[List] = None,
-        delimiter: str = ",",
+        file_storage,
+        form,
+        sketch,
+        index_name,
+        chunk_index_name="",
+        headers_mapping=None,
+        delimiter=",",
     ):
-        """Uploads a file to Timesketch, handling both single files and file chunks.
-
-        This method manages the entire file upload process, including:
-        - Saving the file (or file chunks) to the designated upload directory.
-        - Validating file properties (e.g., name, size, chunk integrity).
-        - Creating or retrieving a SearchIndex for the uploaded data.
-        - Creating a Timeline associated with the SearchIndex and Sketch.
-        - Initiating the indexing pipeline via Celery.
-        - Handling chunked uploads and ensuring all chunks are received.
-        - Returning appropriate responses based on the upload status.
+        """Upload a file.
 
         Args:
-            file_storage: A FileStorage object representing the uploaded file or chunk.
-            form: A dictionary containing form data from the request, including:
-                - name (str): The desired name for the timeline (default: filename).
-                - chunk_index (int, optional): The index of the current chunk
-                    (for chunked uploads).
-                - chunk_byte_offset (int, optional): The byte offset of the
-                    current chunk within the file.
-                - chunk_total_chunks (int, optional): The total number of
-                    chunks in the file.
-                - total_file_size (int): The total size of the file in bytes.
-                - enable_stream (bool, optional): Whether to only index the
-                    data without analysis. Defaults to False.
-                - data_label (str, optional): A label to categorize the data.
-                    Defaults to "".
-                - provider (str, optional): The data provider.
-                    Defaults to "N/A".
-                - context (str, optional): The data context. Defaults to "N/A".
-                - headersMapping (str, optional): JSON string of header mapping.
-                - delimiter (str, optional): delimiter to read the CSV file.
-                    Defaults to ",".
-            sketch: The Sketch object to which the timeline will be added.
-            index_name: The name of the OpenSearch index for the timeline.
-            chunk_index_name: A unique identifier for the file if chunks are
-                used.
-            headers_mapping: A list of dictionaries for mapping headers.
-                Each dictionary should have:
-                - target (str): The target header name.
-                - source (str): The source header name to rename/combine.
-                - default_value (str, optional): A default value if a new
-                    column is added.
+            file_storage: a FileStorage object.
+            form: a dict with the configuration for the upload.
+            sketch: Instance of timesketch.models.sketch.Sketch
+            index_name: the OpenSearch index name for the timeline.
+            chunk_index_name: A unique identifier for a file if
+                chunks are used.
+            headers_mapping: list of dicts containing:
+                             (i) target header we want to insert [key=target],
+                             (ii) sources header we want to rename/combine [key=source],
+                             (iii) def. value if we add a new column [key=default_value]
             delimiter: delimiter to read the CSV file
 
         Returns:
-            A JSON response (flask.wrappers.Response) indicating the status
-                of the upload.
-            - For successful single file uploads or the final chunk of a
-                chunked upload:
-              Returns a JSON representation of the created Timeline with a 201
-                Created status code.
-            - For intermediate chunks of a chunked upload:
-              Returns a JSON response with metadata about the upload progress
-                and a 201 Created status code.
-
-        Raises:
-            HTTP_STATUS_CODE_BAD_REQUEST:
-                - If the timeline name is empty or exceeds 255 characters.
-                - If the file is empty.
-                - If the index name is invalid.
-                - If there's an error writing data to the file.
-                - If the file size is inconsistent after a chunked upload.
-                - If the upload is not enabled.
-                - If the file is not provided.
-            HTTP_STATUS_CODE_NOT_FOUND: If the sketch is not found.
-            HTTP_STATUS_CODE_FORBIDDEN: If the user does not have
-                write access to the sketch.
+            A timeline if created otherwise a search index in JSON (instance
+            of flask.wrappers.Response)
         """
         _filename, _extension = os.path.splitext(file_storage.filename)
         file_extension = _extension.lstrip(".")
@@ -480,7 +419,7 @@ class UploadFileResource(resources.ResourceMixin, Resource):
         except OSError as e:
             abort(
                 HTTP_STATUS_CODE_BAD_REQUEST,
-                f"Unable to write data with error: {e!s}.",
+                "Unable to write data with error: {0!s}.".format(e),
             )
 
         if (chunk_index + 1) != chunk_total_chunks:
@@ -502,7 +441,7 @@ class UploadFileResource(resources.ResourceMixin, Resource):
             abort(
                 HTTP_STATUS_CODE_BAD_REQUEST,
                 "Unable to save file correctly, inconsistent file size "
-                "({:d} but should have been {:d})".format(
+                "({0:d} but should have been {1:d})".format(
                     os.path.getsize(file_path), file_size
                 ),
             )

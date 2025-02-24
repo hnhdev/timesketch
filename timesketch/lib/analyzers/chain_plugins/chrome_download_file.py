@@ -1,7 +1,6 @@
 """Plugin for chaining Chrome downloads to filesystem and execution events."""
 
-from timesketch.lib.analyzers.chain_plugins import interface
-from timesketch.lib.analyzers.chain_plugins import manager
+from timesketch.lib.analyzers.chain_plugins import interface, manager
 
 
 class ChromeDownloadFilesystemChainPlugin(interface.BaseChainPlugin):
@@ -30,7 +29,7 @@ class ChromeDownloadFilesystemChainPlugin(interface.BaseChainPlugin):
         target = base_event.source.get("full_path", "")
         if not target:
             return
-            yield  # pylint: disable=W0101
+            yield
 
         if "\\" in target:
             separator = "\\"

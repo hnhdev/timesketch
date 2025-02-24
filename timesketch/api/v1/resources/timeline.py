@@ -198,9 +198,9 @@ class TimelineListResource(resources.ResourceMixin, Resource):
 
         # Run sketch analyzers when timeline is added. Import here to avoid
         # circular imports.
-        # pylint: disable=import-outside-toplevel
+
         if current_app.config.get("AUTO_SKETCH_ANALYZERS"):
-            # pylint: disable=import-outside-toplevel
+
             from timesketch.lib import tasks
 
             sketch_analyzer_group, _ = tasks.build_sketch_analysis_pipeline(
@@ -679,7 +679,7 @@ class TimelineCreateResource(resources.ResourceMixin, Resource):
             db_session.commit()
 
         # Return Timeline if it was created.
-        # pylint: disable=no-else-return
+
         if timeline:
             return self.to_json(timeline, status_code=HTTP_STATUS_CODE_CREATED)
 

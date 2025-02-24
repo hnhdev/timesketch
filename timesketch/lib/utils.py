@@ -13,7 +13,9 @@
 # limitations under the License.
 """Common functions and utilities."""
 
+from __future__ import unicode_literals
 
+import codecs
 import colorsys
 import csv
 import datetime
@@ -23,10 +25,9 @@ import logging
 import random
 import smtplib
 import time
-import codecs
-from typing import List, Optional
-import pandas
 
+import pandas
+import six
 from dateutil import parser
 from flask import current_app
 from pandas import Timestamp
@@ -59,7 +60,7 @@ def random_color():
     hue += golden_ratio_conjugate
     hue %= 1
     rgb = tuple(int(i * 256) for i in colorsys.hsv_to_rgb(hue, 0.5, 0.95))
-    return f"{rgb[0]:02X}{rgb[1]:02X}{rgb[2]:02X}"
+    return "{0:02X}{1:02X}{2:02X}".format(rgb[0], rgb[1], rgb[2])
 
 
 def _parse_tag_field(row):
@@ -89,11 +90,7 @@ def _scrub_special_tags(dict_obj):
             _ = dict_obj.pop(field)
 
 
-def _validate_csv_fields(
-    mandatory_fields: List,
-    data: pandas.DataFrame,
-    headers_mapping: Optional[List] = None,
-):
+def _validate_csv_fields(mandatory_fields, data, headers_mapping=None):
     """Validate parsed CSV fields against mandatory fields.
 
     Args:
@@ -113,7 +110,7 @@ def _validate_csv_fields(
 
     if headers_mapping:
         check_mapping_errors(parsed_set, headers_mapping)
-        headers_mapping_set = {m["target"] for m in headers_mapping}
+        headers_mapping_set = set(m["target"] for m in headers_mapping)
         headers_missing = headers_missing - headers_mapping_set
     else:
         headers_mapping_set = {}
@@ -158,11 +155,11 @@ def validate_indices(indices, datastore):
     return [i for i in indices if datastore.client.indices.exists(index=i)]
 
 
-def check_mapping_errors(headers: List, headers_mapping: List):
+def check_mapping_errors(headers, headers_mapping):
     """Sanity check for headers mapping
 
     Args:
-        headers: list of headers found in the CSV file.
+        csv_headers: list of headers found in the CSV file.
         headers_mapping: list of dicts containing:
                          (i) target header we want to insert [key=target],
                          (ii) sources header we want to rename/combine [key=source],
@@ -216,7 +213,7 @@ def check_mapping_errors(headers: List, headers_mapping: List):
         )
 
 
-def rename_csv_headers(chunk: pandas.DataFrame, headers_mapping: List):
+def rename_csv_headers(chunk, headers_mapping):
     """ "Rename the headers of the dataframe
 
     Args:
@@ -251,10 +248,7 @@ def rename_csv_headers(chunk: pandas.DataFrame, headers_mapping: List):
 
 
 def read_and_validate_csv(
-    file_handle: object,
-    delimiter: str = ",",
-    mandatory_fields: Optional[List] = None,
-    headers_mapping: Optional[List] = None,
+    file_handle, delimiter=",", mandatory_fields=None, headers_mapping=None
 ):
     """Generator for reading a CSV file.
 
@@ -274,7 +268,7 @@ def read_and_validate_csv(
         mandatory_fields = TIMESKETCH_FIELDS
 
     # Ensures delimiter is a string.
-    if not isinstance(delimiter, str):
+    if not isinstance(delimiter, six.text_type):
         delimiter = codecs.decode(delimiter, "utf8")
 
     # Ensure that required headers are present
@@ -299,7 +293,7 @@ def read_and_validate_csv(
             skipped_rows = chunk[chunk["datetime"].isnull()]
             if not skipped_rows.empty:
                 logger.warning(
-                    "{} rows skipped since they were missing datetime field "
+                    "{0} rows skipped since they were missing datetime field "
                     "or it was empty ".format(len(skipped_rows))
                 )
 
@@ -309,14 +303,14 @@ def read_and_validate_csv(
                 # (not available) as its value and the event row will be
                 # dropped in the next line
                 chunk["datetime"] = pandas.to_datetime(
-                    chunk["datetime"], format="mixed", errors="coerce", utc=True
+                    chunk["datetime"], errors="coerce", utc=True
                 )
                 num_chunk_rows = chunk.shape[0]
 
                 chunk.dropna(subset=["datetime"], inplace=True)
                 if len(chunk) < num_chunk_rows:
                     logger.warning(
-                        "{} rows dropped from Rows {} to {} due to invalid "
+                        "{0} rows dropped from Rows {1} to {2} due to invalid "
                         "datetime values".format(
                             num_chunk_rows - len(chunk),
                             idx * reader.chunksize,
@@ -330,7 +324,7 @@ def read_and_validate_csv(
 
             except ValueError:
                 logger.warning(
-                    "Rows {} to {} skipped due to malformed "
+                    "Rows {0} to {1} skipped due to malformed "
                     "datetime values ".format(
                         idx * reader.chunksize,
                         idx * reader.chunksize + chunk.shape[0],
@@ -348,19 +342,19 @@ def read_and_validate_csv(
                 row.dropna(inplace=True)
 
                 # Make sure we always have a timestamp
-                if "timestamp" not in row:
+                if not "timestamp" in row:
                     row["timestamp"] = int(
                         pandas.Timestamp(row["datetime"]).value / 1000
                     )
 
                 yield row.to_dict()
     except (pandas.errors.EmptyDataError, pandas.errors.ParserError) as e:
-        error_string = f"Unable to read file, with error: {e!s}"
+        error_string = "Unable to read file, with error: {0!s}".format(e)
         logger.error(error_string)
         raise errors.DataIngestionError(error_string) from e
 
 
-def read_and_validate_redline(file_handle: object):
+def read_and_validate_redline(file_handle):
     """Generator for reading a Redline CSV file.
 
     Args:
@@ -401,7 +395,7 @@ def read_and_validate_redline(file_handle: object):
         yield row_to_yield
 
 
-def rename_jsonl_headers(linedict: dict, headers_mapping: List, lineno: int):
+def rename_jsonl_headers(linedict, headers_mapping, lineno):
     """Rename the headers of the dictionary
 
     Args:
@@ -457,9 +451,7 @@ def rename_jsonl_headers(linedict: dict, headers_mapping: List, lineno: int):
     return linedict
 
 
-def read_and_validate_jsonl(
-    file_handle: object, delimiter: str = "", headers_mapping: Optional[List] = None
-):  # pylint: disable=unused-argument
+def read_and_validate_jsonl(file_handle, delimiter=None, headers_mapping=None):
     """Generator for reading a JSONL (json lines) file.
 
     Args:
@@ -500,14 +492,14 @@ def read_and_validate_jsonl(
                 except TypeError:
                     logger.error(
                         "Unable to parse timestamp, skipping line "
-                        "{:d}".format(lineno),
+                        "{0:d}".format(lineno),
                         exc_info=True,
                     )
                     continue
                 except parser.ParserError:
                     logger.error(
                         "Unable to parse timestamp, skipping line "
-                        "{:d}".format(lineno),
+                        "{0:d}".format(lineno),
                         exc_info=True,
                     )
                     continue
@@ -527,35 +519,25 @@ def read_and_validate_jsonl(
 
         except ValueError as e:
             raise errors.DataIngestionError(
-                f"Error parsing JSON at line {lineno:n}: {str(e):s}"
+                "Error parsing JSON at line {0:n}: {1:s}".format(lineno, str(e))
             )
 
 
-def get_validated_indices(
-    indices: List, sketch: object, include_processing_timelines: bool = False
-):
+def get_validated_indices(indices, sketch):
     """Exclude any deleted search index references.
 
     Args:
         indices: List of indices from the user
         sketch: A sketch object (instance of models.sketch.Sketch).
-        include_processing_timelines: True to include Timelines
-          in status "processing". False by default.
 
     Returns:
         Tuple of two items:
           List of indices with those removed that is not in the sketch
           List of timeline IDs that should be part of the output.
     """
-    allowed_statuses = ["ready"]
-    if include_processing_timelines and current_app.config.get(
-        "SEARCH_PROCESSING_TIMELINES", False
-    ):
-        allowed_statuses.append("processing")
-
     sketch_structure = {}
     for timeline in sketch.timelines:
-        if timeline.get_status.status.lower() not in allowed_statuses:
+        if timeline.get_status.status.lower() != "ready":
             continue
         index_ = timeline.searchindex.index_name
         sketch_structure.setdefault(index_, [])
@@ -595,7 +577,7 @@ def get_validated_indices(
     return list(set(indices)), list(timelines)
 
 
-def send_email(subject: str, body: str, to_username: str, use_html: bool = False):
+def send_email(subject, body, to_username, use_html=False):
     """Send email using configure SMTP server.
 
     Args:
@@ -631,9 +613,9 @@ def send_email(subject: str, body: str, to_username: str, use_html: bool = False
     if to_username not in email_user_whitelist:
         return
 
-    from_address = f"{email_from_user:s}@{email_domain:s}"
+    from_address = "{0:s}@{1:s}".format(email_from_user, email_domain)
     # TODO: Add email address to user object and pick it up from there.
-    to_address = f"{to_username:s}@{email_domain:s}"
+    to_address = "{0:s}@{1:s}".format(to_username, email_domain)
     email_content_type = "text"
     if use_html:
         email_content_type = "text/html"

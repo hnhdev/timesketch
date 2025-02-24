@@ -3,8 +3,7 @@
 from unittest import mock
 
 from timesketch.lib.analyzers import browser_search
-from timesketch.lib.testlib import BaseTest
-from timesketch.lib.testlib import MockDataStore
+from timesketch.lib.testlib import BaseTest, MockDataStore
 
 
 class TestBrowserSearchPlugin(BaseTest):
@@ -17,7 +16,7 @@ class TestBrowserSearchPlugin(BaseTest):
         analyzer = browser_search.BrowserSearchSketchPlugin("test_index", 1)
 
         # Need to access protected members for testing purposes.
-        # pylint: disable=protected-access
+
         bing_search = "https://www.bing.com/search?q=foobar+stuff&f=en"
         bing_result = analyzer._extract_search_query_from_url(bing_search, "q")
         self.assertEqual(bing_result, "foobar stuff")

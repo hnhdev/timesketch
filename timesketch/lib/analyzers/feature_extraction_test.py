@@ -16,19 +16,16 @@
 import os
 import re
 import textwrap
-from typing import List, Dict
+from typing import Dict, List
 
-from unittest import mock
+import mock
 import yaml
 
 from timesketch.lib import emojis
-from timesketch.lib.analyzers.feature_extraction import (
-    FeatureExtractionSketchPlugin,
-)
+from timesketch.lib.analyzers.feature_extraction import FeatureExtractionSketchPlugin
 from timesketch.lib.analyzers.feature_extraction_plugins import regex_features
 from timesketch.lib.analyzers.sequence_sessionizer_test import _create_eventObj
-from timesketch.lib.testlib import BaseTest
-from timesketch.lib.testlib import MockDataStore
+from timesketch.lib.testlib import BaseTest, MockDataStore
 
 
 class TestFeatureExtractionSketchPlugin(BaseTest):
@@ -43,7 +40,7 @@ class TestFeatureExtractionSketchPlugin(BaseTest):
         config_file = os.path.join("data", "winevt_features.yaml")
         self.assertTrue(os.path.isfile(config_file))
 
-        with open(config_file, encoding="utf-8") as fh:
+        with open(config_file, "r", encoding="utf-8") as fh:
             config = yaml.safe_load(fh)
 
         self.assertIsInstance(config, dict)
@@ -85,7 +82,7 @@ class TestFeatureExtractionSketchPlugin(BaseTest):
         """
         path = os.path.join("data", file_name)
 
-        with open(path, encoding="utf-8") as fh:
+        with open(path, "r", encoding="utf-8") as fh:
             config = yaml.safe_load(fh)
 
         for name, config in config.items():
@@ -203,7 +200,7 @@ class TestFeatureExtractionSketchPlugin(BaseTest):
         config_file = os.path.join("data", "regex_features.yaml")
         self.assertTrue(os.path.isfile(config_file))
 
-        with open(config_file, "r", encoding="utf-8") as fh:
+        with open(config_file) as fh:
             config = yaml.safe_load(fh)
 
         self.assertIsInstance(config, dict)
@@ -224,7 +221,7 @@ class TestFeatureExtractionSketchPlugin(BaseTest):
 
         current_val = ["hello"]
         extracted_value = ["hello"]
-        # pylint: disable=protected-access
+
         new_val = plugin._get_attribute_value(
             current_val=current_val,
             extracted_value=extracted_value,
@@ -238,7 +235,7 @@ class TestFeatureExtractionSketchPlugin(BaseTest):
 
         current_val = ["hello"]
         extracted_value = ["hello2", "hello3"]
-        # pylint: disable=protected-access
+
         new_val = plugin._get_attribute_value(
             current_val, extracted_value, True, True, True
         )
@@ -248,7 +245,7 @@ class TestFeatureExtractionSketchPlugin(BaseTest):
 
         current_val = ["hello"]
         extracted_value = ["hello2", "hello3"]
-        # pylint: disable=protected-access
+
         new_val = plugin._get_attribute_value(
             current_val, extracted_value, False, True, True
         )
@@ -258,7 +255,7 @@ class TestFeatureExtractionSketchPlugin(BaseTest):
 
         current_val = ["hello"]
         extracted_value = ["hello2", "hello3"]
-        # pylint: disable=protected-access
+
         new_val = plugin._get_attribute_value(
             current_val, extracted_value, False, False, True
         )
@@ -268,7 +265,7 @@ class TestFeatureExtractionSketchPlugin(BaseTest):
 
         current_val = ["hello"]
         extracted_value = ["hello2", "hello3"]
-        # pylint: disable=protected-access
+
         new_val = plugin._get_attribute_value(
             current_val, extracted_value, True, False, True
         )
@@ -278,7 +275,7 @@ class TestFeatureExtractionSketchPlugin(BaseTest):
 
         current_val = "hello"
         extracted_value = ["hello2", "hello3"]
-        # pylint: disable=protected-access
+
         new_val = plugin._get_attribute_value(
             current_val, extracted_value, True, True, False
         )
@@ -287,7 +284,7 @@ class TestFeatureExtractionSketchPlugin(BaseTest):
 
         current_val = "hello"
         extracted_value = ["hello2", "hello3"]
-        # pylint: disable=protected-access
+
         new_val = plugin._get_attribute_value(
             current_val, extracted_value, False, True, False
         )
@@ -296,7 +293,7 @@ class TestFeatureExtractionSketchPlugin(BaseTest):
 
         current_val = "hello"
         extracted_value = ["hello2", "hello3"]
-        # pylint: disable=protected-access
+
         new_val = plugin._get_attribute_value(
             current_val, extracted_value, True, False, False
         )
@@ -305,7 +302,7 @@ class TestFeatureExtractionSketchPlugin(BaseTest):
 
         current_val = "hello"
         extracted_value = ["hello2", "hello3"]
-        # pylint: disable=protected-access
+
         new_val = plugin._get_attribute_value(
             current_val, extracted_value, False, False, False
         )

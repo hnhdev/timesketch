@@ -1,7 +1,6 @@
 """This file contains the plugin for executables in Windows prefetch files."""
 
-from timesketch.lib.analyzers.chain_plugins import interface
-from timesketch.lib.analyzers.chain_plugins import manager
+from timesketch.lib.analyzers.chain_plugins import interface, manager
 
 
 class WinPrefetchChainPlugin(interface.BaseChainPlugin):
@@ -43,7 +42,7 @@ class WinPrefetchChainPlugin(interface.BaseChainPlugin):
         target = base_event.source.get("executable", "")
         if not target:
             return
-            yield  # pylint: disable=W0101
+            yield
 
         search_query = f'url:"*{target:s}*"'
         return_fields = ["url"]

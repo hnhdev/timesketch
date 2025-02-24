@@ -17,8 +17,7 @@ This aggregator is primarily used for the event data analytics and not useful
 for the UI.  Therefore,  by default this aggregator is "hidden" from views.
 """
 
-from timesketch.lib.aggregators import manager
-from timesketch.lib.aggregators import interface
+from timesketch.lib.aggregators import interface, manager
 
 
 class SummaryAggregation(interface.BaseAggregator):
@@ -86,7 +85,6 @@ class SummaryAggregation(interface.BaseAggregator):
             return f'Summary aggregations for "{self.field:s}"'
         return "Summary aggregations for an unknown field."
 
-    # pylint: disable=arguments-differ
     def run(
         self,
         field: str,
@@ -113,9 +111,9 @@ class SummaryAggregation(interface.BaseAggregator):
             interface.AggregationResult: the aggregation result.
         """
         self.field = field
-        # pylint: disable=attribute-defined-outside-init
+
         self.field_query_string = field_query_string
-        # pylint: enable=attribute-defined-outside-init
+
         formatted_field_name = self.format_field_by_type(field)
 
         if field_query_string == "*":
@@ -228,7 +226,6 @@ class DateSummaryAggregator(interface.BaseAggregator):
             return f'Date field summary aggregations for "{self.field:s}"'
         return "Date field summary aggregations for an unknown field."
 
-    # pylint: disable=arguments-differ
     def run(
         self,
         field: str,
@@ -253,9 +250,9 @@ class DateSummaryAggregator(interface.BaseAggregator):
             interface.AggregationResult: the aggregation result.
         """
         self.field = field
-        # pylint: disable=attribute-defined-outside-init
+
         self.field_query_string = field_query_string
-        # pylint: enable=attribute-defined-outside-init
+
         formatted_field_name = self.format_field_by_type(field)
 
         if field_query_string == "*":
