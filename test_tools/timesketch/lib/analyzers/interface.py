@@ -27,7 +27,6 @@ import pandas
 
 from timesketch.lib import definitions
 
-
 logger = logging.getLogger("test_tool.analyzer_run")
 
 
@@ -191,7 +190,7 @@ class AnalyzerContext(object):
         self.event_cache[event.event_id] = event
 
 
-def get_yaml_config(unusued_file_name):  # pylint: disable-msg=unused-argument
+def get_yaml_config(unusued_file_name):
     """Return an empty dict.
 
     This is only implemented to make sure that analyzers attempting
@@ -680,7 +679,7 @@ class BaseAnalyzer(object):
         # the error in the DB for display in the UI.
         try:
             result = self.run()
-        except Exception:  # pylint: disable=broad-except
+        except Exception:
             if self._context:
                 self._context.error = traceback.format_exc()
             logger.error(

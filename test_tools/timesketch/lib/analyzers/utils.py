@@ -19,7 +19,6 @@ from six.moves import urllib_parse as urlparse
 
 from timesketch.lib.analyzers import interface
 
-
 # Title and header text of a story that is common among browser
 # based analyzers.
 BROWSER_STORY_TITLE = "Browser Artifacts"
@@ -251,7 +250,7 @@ def get_events_from_data_frame(frame, datastore):
 
     for row in frame.iterrows():
         _, entry = row
-        # pylint: disable-msg=unexpected-keyword-arg
+
         event = interface.Event(entry, sketch=sketch, context=context, datastore=None)
         if context:
             context.add_event(event)
