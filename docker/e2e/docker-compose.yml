@@ -35,7 +35,6 @@ services:
       - discovery.type=single-node
       - "DISABLE_INSTALL_DEMO_CONFIG=true"
       - "DISABLE_SECURITY_PLUGIN=true"
-      #- "_JAVA_OPTIONS=-XX:UseSVE=0"
     ulimits:
       memlock:
         soft: -1
