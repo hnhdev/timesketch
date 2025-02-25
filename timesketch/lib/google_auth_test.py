@@ -18,6 +18,8 @@ import time
 from unittest import mock
 import jwt
 
+import jwt
+import mock
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 from timesketch.lib.testlib import BaseTest
