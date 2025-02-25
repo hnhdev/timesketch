@@ -19,7 +19,7 @@ import json
 import mock
 import pandas as pd
 
-from timesketch.api.v1.resources import ResourceMixin, scenarios
+from timesketch.api.v1.resources import ResourceMixin
 from timesketch.lib.definitions import (
     HTTP_STATUS_CODE_BAD_REQUEST,
     HTTP_STATUS_CODE_CREATED,
@@ -37,12 +37,15 @@ from timesketch.models.sketch import (
     Scenario,
 )
 
+from timesketch.api.v1.resources import scenarios as Scenarios  # fmt: skip
+
 
 class ResourceMixinTest(BaseTest):
     """Test ResourceMixin."""
 
     def test_to_json_empty_list(self):
         """Behavior of to_json when given an empty list."""
+
         response = ResourceMixin().to_json([])
         self.assertEqual(
             response.json,
@@ -1495,13 +1498,13 @@ class ScenariosResourceTest(BaseTest):
         self._commit_to_database(scenario_sql)
 
         # Test without analysis step
-        result = scenarios.check_and_run_dfiq_analysis_steps(scenario_sql, test_sketch)
+        result = Scenarios.check_and_run_dfiq_analysis_steps(scenario_sql, test_sketch)
         self.assertFalse(result)
 
-        result = scenarios.check_and_run_dfiq_analysis_steps(facet_sql, test_sketch)
+        result = Scenarios.check_and_run_dfiq_analysis_steps(facet_sql, test_sketch)
         self.assertFalse(result)
 
-        result = scenarios.check_and_run_dfiq_analysis_steps(approach_sql, test_sketch)
+        result = Scenarios.check_and_run_dfiq_analysis_steps(approach_sql, test_sketch)
         self.assertFalse(result)
 
         # Add analysis step to approach
@@ -1520,7 +1523,7 @@ class ScenariosResourceTest(BaseTest):
         ]
 
         # Test with analysis step
-        result = scenarios.check_and_run_dfiq_analysis_steps(
+        result = Scenarios.check_and_run_dfiq_analysis_steps(
             scenario_sql, test_sketch, mock_analyzer_manager
         )
         self.assertEqual(result, [mock.ANY, mock.ANY])
@@ -1528,7 +1531,7 @@ class ScenariosResourceTest(BaseTest):
             approach=approach_sql
         )
 
-        result = scenarios.check_and_run_dfiq_analysis_steps(
+        result = Scenarios.check_and_run_dfiq_analysis_steps(
             facet_sql, test_sketch, mock_analyzer_manager
         )
         self.assertEqual(result, [mock.ANY])
@@ -1536,7 +1539,7 @@ class ScenariosResourceTest(BaseTest):
             approach=approach_sql
         )
 
-        result = scenarios.check_and_run_dfiq_analysis_steps(
+        result = Scenarios.check_and_run_dfiq_analysis_steps(
             question_sql, test_sketch, mock_analyzer_manager
         )
         self.assertEqual(result, [mock.ANY])
@@ -1545,7 +1548,7 @@ class ScenariosResourceTest(BaseTest):
         )
 
         # Test with invalid object
-        result = scenarios.check_and_run_dfiq_analysis_steps("invalid", test_sketch)
+        result = Scenarios.check_and_run_dfiq_analysis_steps("invalid", test_sketch)
         self.assertFalse(result)
 
 
