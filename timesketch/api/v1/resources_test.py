@@ -1571,7 +1571,7 @@ class TestLLMSummarizeResource(BaseTest):
         self.app.config["PROMPT_LLM_SUMMARIZATION"] = "data/llm_summarize/prompt.txt"
 
         with mock.patch(
-            "timesketch.api.v1.resources.llm_summarize.LLMSummarizeResource._run_timesketch_query",  # pylint: disable=line-too-long
+            "timesketch.api.v1.resources.llm_summarize.LLMSummarizeResource._run_timesketch_query",
             return_value=pd.DataFrame(),
         ), mock.patch("timesketch.api.v1.resources.OpenSearchDataStore", MockDataStore):
             response = self.client.post(
@@ -1598,10 +1598,10 @@ class TestLLMSummarizeResource(BaseTest):
         sample_events = pd.DataFrame([{"message": "Test event message"}])
 
         with mock.patch(
-            "timesketch.api.v1.resources.llm_summarize.LLMSummarizeResource._run_timesketch_query",  # pylint: disable=line-too-long
+            "timesketch.api.v1.resources.llm_summarize.LLMSummarizeResource._run_timesketch_query",
             return_value=sample_events,
         ), mock.patch(
-            "timesketch.api.v1.resources.llm_summarize.LLMSummarizeResource._get_content",  # pylint: disable=line-too-long
+            "timesketch.api.v1.resources.llm_summarize.LLMSummarizeResource._get_content",
             return_value={"summary": "Mock summary from LLM"},
         ), mock.patch(
             "timesketch.api.v1.resources.OpenSearchDataStore", MockDataStore
