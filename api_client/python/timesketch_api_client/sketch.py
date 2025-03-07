@@ -1518,7 +1518,7 @@ class Sketch(resource.BaseResource):
         return meta
 
     def search_by_label(
-        self, label_name, return_fields=None, max_entries=None, as_pandas=False
+        self, label_name, return_fields=None, max_entries=None, as_dict=True
     ):
         """Searches for all events containing a given label.
 
@@ -1531,7 +1531,7 @@ class Sketch(resource.BaseResource):
                 the output size to the number of events. Events are read in,
                 10k at a time so there may be more events in the answer back
                 than this number denotes, this is a best effort.
-            as_pandas: Optional bool that determines if the results should
+            as_dict: Optional bool that determines if the results should
                 be returned back as a dictionary or a Pandas DataFrame.
 
         Returns:
@@ -1557,7 +1557,7 @@ class Sketch(resource.BaseResource):
             query_dsl=json.dumps({"query": query}),
             return_fields=return_fields,
             max_entries=max_entries,
-            as_pandas=as_pandas,
+            as_dict=as_dict,
         )
 
     def add_scenario(self, uuid=None, dfiq_id=None, name=None):
