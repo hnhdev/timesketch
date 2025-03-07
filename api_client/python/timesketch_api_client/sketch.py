@@ -1011,7 +1011,7 @@ class Sketch(resource.BaseResource):
                 function will return a search object back.
 
         Returns:
-            pandas DataFrame with query results, a dict if as_dict is set to 
+            pandas DataFrame with query results, a dict if as_dict is set to
             True or a search.Search object if as_object is set to True.
             If file_name is provided then no value will be returned.
 
