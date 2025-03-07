@@ -981,9 +981,9 @@ class Sketch(resource.BaseResource):
         query_filter=None,
         view=None,
         return_fields=None,
-        as_pandas=False,
         max_entries=None,
         file_name="",
+        as_dict=False,
         as_object=False,
     ):
         """Explore the sketch.
@@ -996,8 +996,6 @@ class Sketch(resource.BaseResource):
             return_fields (str): A comma separated string with a list of fields
                 that should be included in the response. Optional and defaults
                 to None.
-            as_pandas (bool): Optional bool that determines if the results
-                should be returned back as a dictionary or a Pandas DataFrame.
             max_entries (int): Optional integer denoting a best effort to limit
                 the output size to the number of events. Events are read in,
                 10k at a time so there may be more events in the answer back
@@ -1007,15 +1005,15 @@ class Sketch(resource.BaseResource):
                 returned back as a dict or a pandas DataFrame. The ZIP file
                 will contain a METADATA file and a CSV with the results from
                 the query.
+            as_dict (bool): Optional bool that determines whether the
+                function will return a dict.
             as_object (bool): Optional bool that determines whether the
-                function will return a search object back instead of raw
-                results.
+                function will return a search object back.
 
         Returns:
-            Dictionary with query results, a pandas DataFrame if as_pandas
-            is set to True or a search.Search object if as_object is set
-            to True. If file_name is provided then no value will be
-            returned.
+            pandas DataFrame with query results, a dict if as_dict is set to 
+            True or a search.Search object if as_object is set to True.
+            If file_name is provided then no value will be returned.
 
         Raises:
             ValueError: if unable to query for the results.
@@ -1048,10 +1046,10 @@ class Sketch(resource.BaseResource):
         if file_name:
             return search_obj.to_file(file_name)
 
-        if as_pandas:
-            return search_obj.to_pandas()
+        if as_dict:
+            return search_obj.to_dict()
 
-        return search_obj.to_dict()
+        return search_obj.to_pandas()
 
     def list_available_analyzers(self):
         """Returns a list of available analyzers."""
