@@ -392,10 +392,6 @@ class Sketch(resource.BaseResource):
         Returns:
             A search.Search object that has been saved to the database.
         """
-        logger.warning(
-            "View objects will be deprecated shortly, use search.Search "
-            "and call the search_obj.save() function to save a search."
-        )
 
         if not (query_string or query_dsl):
             raise ValueError("You need to supply a query string or a dsl")
@@ -749,10 +745,6 @@ class Sketch(resource.BaseResource):
             Returns a None if neither view_id or view_name is defined or if
             the search does not exist.
         """
-        logger.warning(
-            "This function is about to be deprecated, use "
-            "get_saved_search() instead."
-        )
 
         return self.get_saved_search(search_id=view_id, search_name=view_name)
 
@@ -865,10 +857,6 @@ class Sketch(resource.BaseResource):
         Returns:
             List of search object (instance of search.Search).
         """
-        logger.warning(
-            "This function will soon be deprecated, use list_saved_searches() "
-            "instead."
-        )
         return self.list_saved_searches()
 
     def list_saved_searches(self):
@@ -1044,10 +1032,6 @@ class Sketch(resource.BaseResource):
         search_obj = search.Search(sketch=self)
 
         if view:
-            logger.warning(
-                "View objects will be deprecated soon, use search.Search "
-                "objects instead."
-            )
             search_obj.from_saved(view.id)
 
         else:
@@ -1108,14 +1092,6 @@ class Sketch(resource.BaseResource):
             If the analyzer runs successfully return back an AnalyzerResult
             object.
         """
-        # TODO: Deprecate this function.
-        logger.warning(
-            "This function is about to be deprecated, please use the "
-            "`.run_analyzer()` function of a timeline object instead. "
-            "This function does not support all functionality of the newer "
-            "implementation in the timeline object."
-        )
-
         if self.is_archived():
             raise error.UnableToRunAnalyzer(
                 "Unable to run an analyzer on an archived sketch."
@@ -1319,12 +1295,6 @@ class Sketch(resource.BaseResource):
         """
         if self.is_archived():
             raise RuntimeError("Unable to store an aggregator on an archived sketch.")
-
-        # TODO: Deprecate this function.
-        logger.warning(
-            "This function is about to be deprecated, please use the "
-            "`.save()` function of an aggregation object instead"
-        )
 
         aggregator_obj = self.run_aggregator(aggregator_name, aggregator_parameters)
         aggregator_obj.name = name
@@ -1571,11 +1541,6 @@ class Sketch(resource.BaseResource):
         """
         if self.is_archived():
             raise RuntimeError("Unable to search for labels in an archived sketch.")
-
-        logger.warning(
-            "This function will be deprecated soon. Use the search.Search "
-            "object instead and add a search.LabelChip to search for labels."
-        )
 
         query = {
             "nested": {
