@@ -1464,12 +1464,7 @@ class Sketch(resource.BaseResource):
         The upper limit is 500 (events or tags) based on the API.
 
         Args:
-            events: events dict. Must have the structure:
-                "events": [
-                {
-                    "_id": event_id,
-                    "_index": index,
-                }
+            events: events dict.
             tags_to_remove: list of tags to remove
 
         Returns:
@@ -1480,7 +1475,7 @@ class Sketch(resource.BaseResource):
 
         form_data = {
             "tags_to_remove": tags_to_remove,
-            "events": events,
+            "events": events["objects"],
         }
         resource_url = "{0:s}/sketches/{1:d}/event/untag/".format(
             self.api.api_root, self.id
@@ -1549,6 +1544,8 @@ class Sketch(resource.BaseResource):
         if not all(isinstance(x, str) for x in tags):
             raise ValueError("Tags need to be a list of strings.")
 
+        events = [self.tag_event(event)[0] for event in events["objects"]]
+
         form_data = {
             "tag_string": json.dumps(tags),
             "events": events,
@@ -1558,18 +1555,7 @@ class Sketch(resource.BaseResource):
             self.api.api_root, self.id
         )
         response = self.api.session.post(resource_url, json=form_data)
-        status = error.check_return_status(response, logger)
-        if not status:
-            return {
-                "number_of_events": len(events),
-                "number_of_events_with_tag": 0,
-                "success": status,
-            }
-
-        response_json = error.get_response_json(response, logger)
-        meta = response_json.get("meta", {})
-        meta["total_number_of_events_sent_by_client"] = len(events)
-        return meta
+        return error.get_response_json(response, logger)
 
     def search_by_label(
         self, label_name, return_fields=None, max_entries=None, as_dict=True
