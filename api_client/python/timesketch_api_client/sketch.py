@@ -1404,6 +1404,60 @@ class Sketch(resource.BaseResource):
         response = self.api.session.post(resource_url, json=form_data)
         return error.get_response_json(response, logger)
 
+    def remove_label_event(self, event, label_name):
+        """Remove a label from an event.
+
+        Args:
+            event: JSON object representing an event.
+            label_name: String to label the event with.
+
+        Returns:
+            Dictionary with query results.
+        """
+        if self.is_archived():
+            raise RuntimeError("Unable to label events in an archived sketch.")
+
+        form_data = {
+            "annotation": label_name,
+            "annotation_type": "label",
+            "event_id": event.get("_id"),
+            "searchindex_id": event.get("_index"),
+        }
+        resource_url = "{0:s}/sketches/{1:d}/event/annotate/".format(
+            self.api.api_root, self.id
+        )
+        response = self.api.session.delete(resource_url, json=form_data)
+        return error.get_response_json(response, logger)
+
+    def tag_event(self, event):
+        event = [
+            {
+                "_id": event.get("_id"),
+                "_index": event.get("_index"),
+                "_type": "generic_event",
+            }
+        ]
+
+        return event
+
+    def star_events(self, events):
+        for event in events["objects"]:
+
+            if "__ts_star" in event.get("_source").get("label"):
+                continue
+
+            event = self.tag_event(event)
+
+            self.label_events(event, "__ts_star")
+
+    def remove_star_events(self, events):
+        for event in events["objects"]:
+
+            if not "__ts_star" in event.get("_source").get("label"):
+                continue
+
+            self.remove_label_event(event, "__ts_star")
+
     def untag_events(self, events, tags_to_remove: list):
         """Removes a list of tags from a list of events.
 
