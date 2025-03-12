@@ -652,12 +652,8 @@ class EventAnnotationResourceTest(BaseTest):
         Authenticated request to create an annotation, but in the wrong index.
         """
         self.login()
-        data = dict(
-            annotation="test",
-            annotation_type="comment",
-            event_id="test",
-            searchindex_id="invalid_searchindex",
-        )
+        event = {"_type": "test_event", "_index": "invalid_searchindex", "_id": "test"}
+        data = dict(annotation="test", annotation_type="comment", events=[event])
         response = self.client.post(
             self.resource_url,
             data=json.dumps(data),
