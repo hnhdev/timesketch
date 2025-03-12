@@ -647,19 +647,24 @@ class EventAnnotationResourceTest(BaseTest):
             self.assertIsInstance(response.json, dict)
             self.assertEqual(response.status_code, HTTP_STATUS_CODE_CREATED)
 
-    # def test_post_annotate_invalid_index_resource(self):
-    #     """
-    #     Authenticated request to create an annotation, but in the wrong index.
-    #     """
-    #     self.login()
-    #     event = {"_type": "test_event", "_index": "invalid_searchindex", "_id": "test"}
-    #     data = dict(annotation="test", annotation_type="comment", events=[event])
-    #     response = self.client.post(
-    #         self.resource_url,
-    #         data=json.dumps(data),
-    #         content_type="application/json",
-    #     )
-    #     self.assertEqual(response.status_code, HTTP_STATUS_CODE_BAD_REQUEST)
+    @mock.patch("timesketch.api.v1.resources.OpenSearchDataStore", MockDataStore)
+    def test_post_annotate_invalid_index_resource(self):
+        """
+        Authenticated request to create an annotation, but in the wrong index.
+        """
+        self.login()
+        event = {"_type": "test_event", "_index": "invalid_searchindex", "_id": "test"}
+        data = dict(
+            annotation="test",
+            annotation_type="comment",
+            events=[event],
+        )
+        response = self.client.post(
+            self.resource_url,
+            data=json.dumps(data),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, HTTP_STATUS_CODE_BAD_REQUEST)
 
 
 class SearchIndexResourceTest(BaseTest):
