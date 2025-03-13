@@ -1429,7 +1429,7 @@ class Sketch(resource.BaseResource):
         response = self.api.session.delete(resource_url, json=form_data)
         return error.get_response_json(response, logger)
 
-    def tag_event(self, event):
+    def build_event(self, event):
         event = [
             {
                 "_id": event.get("_id"),
@@ -1446,7 +1446,7 @@ class Sketch(resource.BaseResource):
             if "__ts_star" in event.get("_source").get("label"):
                 continue
 
-            event = self.tag_event(event)
+            event = self.build_event(event)
 
             self.label_events(event, "__ts_star")
 
@@ -1544,7 +1544,7 @@ class Sketch(resource.BaseResource):
         if not all(isinstance(x, str) for x in tags):
             raise ValueError("Tags need to be a list of strings.")
 
-        events = [self.tag_event(event)[0] for event in events["objects"]]
+        events = [self.build_event(event)[0] for event in events["objects"]]
 
         form_data = {
             "tag_string": json.dumps(tags),
