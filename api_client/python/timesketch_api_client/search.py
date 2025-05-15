@@ -163,15 +163,13 @@ class DateIntervalChip(Chip):
     def date(self, date):
         """Make changes to the date."""
         try:
-            dt = datetime.datetime.strptime(
-                date, self._DATE_FORMAT_MICROSECONDS)
+            dt = datetime.datetime.strptime(date, self._DATE_FORMAT_MICROSECONDS)
         except ValueError:
             try:
                 dt = datetime.datetime.strptime(date, self._DATE_FORMAT)
             except ValueError:
                 try:
-                    dt = datetime.datetime.strptime(
-                        date, self._DATE_ONLY_FORMAT)
+                    dt = datetime.datetime.strptime(date, self._DATE_ONLY_FORMAT)
                 except ValueError as exc:
                     logger.error(
                         "Unable to add date chip, wrong date format", exc_info=True
@@ -192,8 +190,7 @@ class DateIntervalChip(Chip):
             date, time, before, after = split_value
             date_time = f"{date}T{time}"
         else:
-            raise ValueError(
-                "Unable to configure date chip, wrong date format.")
+            raise ValueError("Unable to configure date chip, wrong date format.")
 
         self.unit = before[-1]
         if date_time.endswith("Z"):
@@ -259,8 +256,7 @@ class DateRangeChip(Chip):
             end_time = f"{end_time}T23:59:59"
 
         try:
-            dt = datetime.datetime.strptime(
-                end_time, self._DATE_FORMAT_MICROSECONDS)
+            dt = datetime.datetime.strptime(end_time, self._DATE_FORMAT_MICROSECONDS)
         except ValueError as exc:
             try:
                 dt = datetime.datetime.strptime(end_time, self._DATE_FORMAT)
@@ -288,8 +284,7 @@ class DateRangeChip(Chip):
             start_time = f"{start_time}T00:00:00"
 
         try:
-            dt = datetime.datetime.strptime(
-                start_time, self._DATE_FORMAT_MICROSECONDS)
+            dt = datetime.datetime.strptime(start_time, self._DATE_FORMAT_MICROSECONDS)
         except ValueError as exc:
             try:
                 dt = datetime.datetime.strptime(start_time, self._DATE_FORMAT)
@@ -511,12 +506,10 @@ class Search(resource.SketchResource):
         """
         query_filter = self.query_filter
         if not isinstance(query_filter, dict):
-            raise ValueError(
-                "Unable to query with a query filter that isn't a dict.")
+            raise ValueError("Unable to query with a query filter that isn't a dict.")
 
         stop_size = self.max_entries
-        scrolling = not bool(stop_size and (
-            stop_size < self.DEFAULT_SIZE_LIMIT))
+        scrolling = not bool(stop_size and (stop_size < self.DEFAULT_SIZE_LIMIT))
 
         if self.scrolling is not None:
             scrolling = self.scrolling
@@ -574,8 +567,7 @@ class Search(resource.SketchResource):
             more_response_json = error.get_response_json(more_response, logger)
             count = len(more_response_json.get("objects", []))
             total_count += count
-            response_json["objects"].extend(
-                more_response_json.get("objects", []))
+            response_json["objects"].extend(more_response_json.get("objects", []))
             more_meta = more_response_json.get("meta", {})
             added_time = more_meta.get("es_time", 0)
             response_json["meta"]["es_time"] += added_time
@@ -716,8 +708,7 @@ class Search(resource.SketchResource):
         # self._searchtemplate = data.get('searchtemplate', 0)
         # self._aggregations = data.get('aggregation', 0)
 
-        self._created_at = datetime.datetime.now(
-            datetime.timezone.utc).isoformat()
+        self._created_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
         self._updated_at = self._created_at
 
         self.resource_data = {}
@@ -812,8 +803,7 @@ class Search(resource.SketchResource):
 
         for timeline_object in self._sketch.list_timelines():
             timeline_indices.setdefault(timeline_object.index_name, [])
-            timeline_indices[timeline_object.index_name].append(
-                timeline_object.name)
+            timeline_indices[timeline_object.index_name].append(timeline_object.name)
             valid_ids.add(timeline_object.id)
 
             timeline_names[timeline_object.name] = timeline_object.id
@@ -1005,8 +995,7 @@ class Search(resource.SketchResource):
             RuntimeError: if the search could not be saved.
         """
         if not self.name:
-            raise ValueError(
-                "No name for the query saved. Please select a name first.")
+            raise ValueError("No name for the query saved. Please select a name first.")
 
         if not (self.query_string or self.query_dsl):
             raise ValueError(
@@ -1015,8 +1004,7 @@ class Search(resource.SketchResource):
             )
 
         if not self.description:
-            logger.warning(
-                "No description selected for search, saving without one")
+            logger.warning("No description selected for search, saving without one")
 
         if self._resource_id:
             resource_url = (
@@ -1052,8 +1040,7 @@ class Search(resource.SketchResource):
         response = self.api.session.post(resource_url, json=data)
         status = error.check_return_status(response, logger)
         if not status:
-            error.error_message(
-                response, "Unable to save search", error=RuntimeError)
+            error.error_message(response, "Unable to save search", error=RuntimeError)
 
         response_json = error.get_response_json(response, logger)
         search_dict = response_json.get("objects", [{}])[0]
