@@ -1012,8 +1012,7 @@ class Search(resource.SketchResource):
                 f"{self._resource_id}/"
             )
         else:
-            resource_url = f"{
-                self.api.api_root}/sketches/{self._sketch.id}/views/"
+            resource_url = f"{self.api.api_root}/sketches/{self._sketch.id}/views/"
 
         query_filter = self.query_filter
         if self.return_fields:
