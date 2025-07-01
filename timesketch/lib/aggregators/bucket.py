@@ -13,7 +13,8 @@
 # limitations under the License.
 """Bucket aggregations."""
 
-from timesketch.lib.aggregators import interface, manager
+from timesketch.lib.aggregators import manager
+from timesketch.lib.aggregators import interface
 
 
 class TermsAggregation(interface.BaseAggregator):
@@ -78,14 +79,15 @@ class TermsAggregation(interface.BaseAggregator):
             return f'Top results for "{self.field:s}"'
         return "Top results for an unknown field"
 
+    # pylint: disable=arguments-differ
     def run(
         self,
-        field,
-        limit=10,
-        supported_charts="table",
-        start_time="",
-        end_time="",
-        order_field="count",
+        field: str,
+        limit: int = 10,
+        supported_charts: str = "table",
+        start_time: str = "",
+        end_time: str = "",
+        order_field: str = "count",
     ):
         """Run the aggregation.
 

@@ -1,21 +1,19 @@
 """Tests for WinEVTXSessionizerSketchPlugin, LogonSessionizerSketchPludin and
 UnlockSessionizerSketchPlugin"""
 
-from __future__ import unicode_literals
-
-import copy
 import unittest
+import copy
+from unittest import mock
+from typing import Optional
 
-import mock
+from timesketch.lib.analyzers.evtx_sessionizers import LogonSessionizerSketchPlugin
+from timesketch.lib.analyzers.evtx_sessionizers import UnlockSessionizerSketchPlugin
 
-from timesketch.lib.analyzers.evtx_sessionizers import (
-    LogonSessionizerSketchPlugin,
-    UnlockSessionizerSketchPlugin,
-)
 from timesketch.lib.analyzers.interface import Event
-from timesketch.lib.testlib import BaseTest, MockDataStore
-from timesketch.models.sketch import Sketch
+from timesketch.lib.testlib import BaseTest
+from timesketch.lib.testlib import MockDataStore
 from timesketch.models.user import User
+from timesketch.models.sketch import Sketch
 
 xml_string1 = (
     '<Event xmlns="http://schemas.microsoft.com/win/2004/08/events'
@@ -115,6 +113,7 @@ class TestWinEXTXSessionizerPlugin(BaseTest):
                 message, "Sessionizing completed, number of sessions created: 1"
             )
 
+            # pylint: disable=unexpected-keyword-arg
             event1 = datastore.event_store["0"]
             self.assertEqual(
                 event1["_source"]["session_id"][analyzer.session_type], ["0 (USER_1)"]
@@ -171,6 +170,8 @@ class TestWinEXTXSessionizerPlugin(BaseTest):
             self.assertEqual(
                 message, "Sessionizing completed, number of sessions created: 3"
             )
+
+            # pylint: disable=unexpected-keyword-arg
 
             # session 0
             event1 = datastore.event_store["0"]
@@ -240,6 +241,7 @@ class TestWinEXTXSessionizerPlugin(BaseTest):
                 message, "Sessionizing completed, number of sessions created: 2"
             )
 
+            # pylint: disable=unexpected-keyword-arg
             event1 = datastore.event_store["0"]
             self.assertEqual(
                 event1["_source"]["session_id"][analyzer.session_type], ["0 (USER_1)"]
@@ -251,7 +253,7 @@ class TestWinEXTXSessionizerPlugin(BaseTest):
             event3 = datastore.event_store["2"]
             self.assertEqual(
                 set(event3["_source"]["session_id"][analyzer.session_type]),
-                set(["0 (USER_1)", "1 (USER_2)"]),
+                {"0 (USER_1)", "1 (USER_2)"},
             )
             event4 = datastore.event_store["3"]
             self.assertTrue(
@@ -293,6 +295,7 @@ class TestWinEXTXSessionizerPlugin(BaseTest):
                 message, "Sessionizing completed, number of sessions created: 1"
             )
 
+            # pylint: disable=unexpected-keyword-arg
             event1 = datastore.event_store["0"]
             self.assertEqual(
                 event1["_source"]["session_id"][analyzer.session_type], ["0 (USER_1)"]
@@ -341,6 +344,7 @@ class TestWinEXTXSessionizerPlugin(BaseTest):
                 message, "Sessionizing completed, number of sessions created: 1"
             )
 
+            # pylint: disable=unexpected-keyword-arg
             event1 = datastore.event_store["0"]
             self.assertTrue(
                 event1["_source"].get("session_id") is None
@@ -394,6 +398,7 @@ class TestWinEXTXSessionizerPlugin(BaseTest):
                 message, "Sessionizing completed, number of sessions created: 2"
             )
 
+            # pylint: disable=unexpected-keyword-arg
             event1 = datastore.event_store["0"]
             self.assertEqual(
                 event1["_source"]["session_id"][analyzer.session_type], ["0 (USER_1)"]
@@ -445,6 +450,7 @@ class TestWinEXTXSessionizerPlugin(BaseTest):
                 message, "Sessionizing completed, number of sessions created: 1"
             )
 
+            # pylint: disable=unexpected-keyword-arg
             event1 = datastore.event_store["0"]
             self.assertEqual(
                 event1["_source"]["session_id"][analyzer.session_type], ["0 (USER_1)"]
@@ -479,7 +485,11 @@ class TestWinEXTXSessionizerPlugin(BaseTest):
 
 
 def _create_mock_event(
-    datastore, event_id, quantity, time_diffs=None, source_attrs=None
+    datastore: MockDataStore,
+    event_id: str,
+    quantity: int,
+    time_diffs: Optional[list] = None,
+    source_attrs: Optional[list] = None,
 ):
     """
     Loads in the datastore mock events that based on the given arguments.

@@ -12,24 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Analysis resources for version 1 of the Timesketch API."""
-import collections
 import fnmatch
+import collections
 import logging
 
 import prometheus_client
-from flask import abort, jsonify, request
-from flask_login import current_user, login_required
-from flask_restful import Resource, reqparse
+
+from flask import jsonify
+from flask import request
+from flask import abort
+from flask_restful import Resource
+from flask_restful import reqparse
+from flask_login import login_required
+from flask_login import current_user
 
 from timesketch.api.v1 import resources
 from timesketch.lib.analyzers import manager as analyzer_manager
-from timesketch.lib.definitions import (
-    HTTP_STATUS_CODE_BAD_REQUEST,
-    HTTP_STATUS_CODE_FORBIDDEN,
-    HTTP_STATUS_CODE_NOT_FOUND,
-    METRICS_NAMESPACE,
-)
-from timesketch.models.sketch import Analysis, AnalysisSession, Sketch, Timeline
+from timesketch.lib.definitions import HTTP_STATUS_CODE_BAD_REQUEST
+from timesketch.lib.definitions import HTTP_STATUS_CODE_FORBIDDEN
+from timesketch.lib.definitions import HTTP_STATUS_CODE_NOT_FOUND
+from timesketch.lib.definitions import METRICS_NAMESPACE
+from timesketch.models.sketch import Analysis
+from timesketch.models.sketch import AnalysisSession
+from timesketch.models.sketch import Sketch
+from timesketch.models.sketch import Timeline
 
 # Metrics definitions
 METRICS = {
@@ -287,7 +293,7 @@ class AnalyzerRunResource(resources.ResourceMixin, Resource):
             return abort(HTTP_STATUS_CODE_BAD_REQUEST, "No analyzers found to run.")
 
         # Import here to avoid circular imports.
-
+        # pylint: disable=import-outside-toplevel
         from timesketch.lib import tasks
 
         # TODO: Change to run on Timeline instead of Index
@@ -315,7 +321,7 @@ class AnalyzerRunResource(resources.ResourceMixin, Resource):
             except KeyError as e:
                 logger.warning(
                     "Unable to build analyzer pipeline, analyzer does not "
-                    "exists. Error message: {0!s}".format(e)
+                    "exists. Error message: {!s}".format(e)
                 )
                 continue
 

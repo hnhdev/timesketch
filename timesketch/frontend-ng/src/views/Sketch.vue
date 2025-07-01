@@ -251,9 +251,12 @@ limitations under the License.
         ></ts-saved-searches>
         <ts-data-types :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-data-types>
         <ts-tags :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-tags>
-        <!--<ts-stories :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-stories>-->
+        <ts-graphs :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-graphs>
+        <ts-stories :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-stories>
         <ts-search-templates :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-search-templates>
+        <ts-sigma-rules :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-sigma-rules>
         <ts-intelligence :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-intelligence>
+        <ts-analyzer-results :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-analyzer-results>
         <ts-visualizations :icon-only="isMiniDrawer" @toggleDrawer="toggleDrawer()"></ts-visualizations>
       </v-navigation-drawer>
 
@@ -275,7 +278,15 @@ limitations under the License.
       <v-main class="notransition">
         <!-- Scenario context -->
         <!--<ts-scenario-navigation v-if="sketch.status && hasTimelines && !isArchived"></ts-scenario-navigation>-->
-        <ts-question-card v-if="sketch.status && hasTimelines && !isArchived && systemSettings.DFIQ_ENABLED"></ts-question-card>
+        <ts-question-card
+          v-if="
+            sketch.status &&
+            hasTimelines &&
+            !isArchived &&
+            systemSettings.DFIQ_ENABLED &&
+            !questionCardExclusionRoutes.includes(currentRouteName)
+          "
+        ></ts-question-card>
 
         <router-view
           v-if="sketch.status && hasTimelines && !isArchived"
@@ -343,12 +354,15 @@ import TsSavedSearches from '../components/LeftPanel/SavedSearches.vue'
 import TsDataTypes from '../components/LeftPanel/DataTypes.vue'
 import TsTags from '../components/LeftPanel/Tags.vue'
 import TsSearchTemplates from '../components/LeftPanel/SearchTemplates.vue'
+import TsSigmaRules from '../components/LeftPanel/SigmaRules.vue'
 import TsIntelligence from '../components/LeftPanel/ThreatIntel.vue'
-// import TsStories from '../components/LeftPanel/Stories.vue'
+import TsGraphs from '../components/LeftPanel/Graphs.vue'
+import TsStories from '../components/LeftPanel/Stories.vue'
 import TsSearch from '../components/LeftPanel/Search.vue'
 import TsUploadTimelineFormButton from '../components/UploadFormButton.vue'
 import TsShareCard from '../components/ShareCard.vue'
 import TsRenameSketch from '../components/RenameSketch.vue'
+import TsAnalyzerResults from '../components/LeftPanel/AnalyzerResults.vue'
 import TsEventList from '../components/Explore/EventList.vue'
 import TsVisualizations from '../components/LeftPanel/Visualizations.vue'
 import TsTimelinesTable from '../components/LeftPanel/TimelinesTable.vue'
@@ -362,12 +376,15 @@ export default {
     TsDataTypes,
     TsTags,
     TsSearchTemplates,
+    TsSigmaRules,
     TsUploadTimelineFormButton,
     TsShareCard,
     TsRenameSketch,
     TsIntelligence,
-    // TsStories,
+    TsGraphs,
+    TsStories,
     TsSearch,
+    TsAnalyzerResults,
     TsTimelinesTable,
     TsEventList,
     TsVisualizations,
@@ -403,20 +420,26 @@ export default {
       showQuestionMenu: false,
       showRightSidePanel: false,
       showSettingsDialog: false,
+      questionCardExclusionRoutes: [
+        'VisualizationNew',
+        'SigmaNewRule',
+        'Analyze',
+        'Story'
+      ],
     }
   },
   mounted() {
     this.loadingSketch = true
     this.showLeftPanel = false
-    this.$store.dispatch('updateSketch', this.sketchId).then(() => {
+    this.$store.dispatch('updateUserSettings').then(() =>
+      this.$store.dispatch('updateSketch', this.sketchId)).then(() => {
       this.$store.dispatch('updateSearchHistory', this.sketchId)
       this.$store.dispatch('updateScenarioTemplates', this.sketchId)
       this.$store.dispatch('updateSavedGraphs', this.sketchId)
       this.$store.dispatch('updateGraphPlugins')
       this.$store.dispatch('updateContextLinks')
       this.$store.dispatch('updateAnalyzerList', this.sketchId)
-      this.$store.dispatch('updateSystemSettings')
-      this.$store.dispatch('updateUserSettings').then(() => {
+      this.$store.dispatch('updateSystemSettings').then(() => {
         if (this.userSettings.showLeftPanel) {
           this.toggleDrawer()
         }
@@ -500,7 +523,7 @@ export default {
       }
     },
     generateContextQuery(event) {
-      let timestampMillis = this.$options.filters.formatTimestamp(event._source.datetime)
+      let timestampMillis = this.$options.filters.formatTimestamp(event._source.timestamp)
       this.contextStartTime = dayjs.utc(timestampMillis).subtract(this.contextTimeWindowSeconds, 'second')
       this.contextEndTime = dayjs.utc(timestampMillis).add(this.contextTimeWindowSeconds, 'second')
       let startChip = {
@@ -579,7 +602,7 @@ export default {
     },
     updateDocumentTitle: function() {
       if (this.sketch && this.sketch.name && this.sketch.id) {
-        document.title = this.sketch.name;
+        document.title = `[${this.sketch.id}] ${this.sketch.name}`;
       } else {
         document.title = 'Timesketch';
       }

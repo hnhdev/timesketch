@@ -17,20 +17,24 @@
 
 """Sketch analyzer plugin for geolocating IP addresses."""
 
+import os
 import ipaddress
 import logging
-import os
+
 from collections import defaultdict
 from typing import Tuple, Union
+
+from flask import current_app
 
 import geoip2.database
 import geoip2.errors
 import geoip2.webservice
 import maxminddb
-from flask import current_app
 
 from timesketch.lib import emojis
-from timesketch.lib.analyzers import interface, manager
+from timesketch.lib.analyzers import interface
+from timesketch.lib.analyzers import manager
+
 
 logger = logging.getLogger("timesketch.analyzers.geoip")
 
@@ -39,7 +43,7 @@ class GeoIPClientError(Exception):
     """An error raised by the GeoIP client"""
 
 
-class GeoIpClientAdapter(object):
+class GeoIpClientAdapter:
     """Base adapter interface for a third party geolocation service."""
 
     def __enter__(self):
@@ -89,6 +93,7 @@ class MaxMindGeoDbClient(geoip2.database.Reader, GeoIpClientAdapter):
         """
         return self
 
+    # pylint: disable=W0235
     def __exit__(self, exc_type, exc_value, traceback):
         """Close and clean up client."""
         return super().__exit__(exc_type, exc_value, traceback)
@@ -113,10 +118,10 @@ class MaxMindGeoDbClient(geoip2.database.Reader, GeoIpClientAdapter):
         try:
             response = self.city(ip_address)
         except geoip2.errors.AddressNotFoundError:
-            logging.debug("IP address {0} not found.".format(ip_address))
+            logging.debug("IP address %s not found.", ip_address)
             return None
         except maxminddb.InvalidDatabaseError as error:
-            logging.error("Error while geolocating {0} - {1}".format(ip_address, error))
+            logging.error("Error while geolocating %s - %s", ip_address, error)
             return None
 
         latitude = response.location.latitude
@@ -149,6 +154,7 @@ class MaxMindGeoWebClient(geoip2.webservice.Client, GeoIpClientAdapter):
         """
         return self
 
+    # pylint: disable=W0235
     def __exit__(self, exc_type, exc_value, traceback):
         """Close and clean up client."""
         return super().__exit__(exc_type, exc_value, traceback)
@@ -173,10 +179,10 @@ class MaxMindGeoWebClient(geoip2.webservice.Client, GeoIpClientAdapter):
         try:
             response = self.city(ip_address)
         except geoip2.errors.AddressNotFoundError:
-            logging.debug("IP address {0} not found.".format(ip_address))
+            logging.debug("IP address %s not found.", ip_address)
             return None
         except geoip2.errors.GeoIP2Error as error:
-            logging.error("Error while geolocating {0} - {1}".format(ip_address, error))
+            logging.error("Error while geolocating %s - %s", ip_address, error)
             return None
 
         latitude = response.location.latitude
@@ -284,7 +290,7 @@ class BaseGeoIpAnalyzer(interface.BaseAnalyzer):
                     ip_addresses[ip_addr][ip_address_field].append(event)
 
         try:
-            client = self.GEOIP_CLIENT()
+            client = self.GEOIP_CLIENT()  # pylint: disable=E1102
         except GeoIPClientError as error:
             return f"GeoIP Client error - {error}"
 
@@ -301,7 +307,7 @@ class BaseGeoIpAnalyzer(interface.BaseAnalyzer):
                     "GeoIP client must return 5 fields: "
                     "<iso_code, latitude, longitude, country_name, "
                     "city_name>. "
-                    " Number of fields returned: {0:d}".format(len(response))
+                    " Number of fields returned: {:d}".format(len(response))
                 )
                 continue
 
@@ -309,7 +315,7 @@ class BaseGeoIpAnalyzer(interface.BaseAnalyzer):
 
             if flag_emoji is None:
                 logger.error(
-                    "Invalid ISO code {0} encountered for IP {1}.".format(
+                    "Invalid ISO code {} encountered for IP {}.".format(
                         iso_code, ip_address
                     )
                 )

@@ -23,9 +23,9 @@ insights. This analyzer is not useful for UI and therefore is "hidden" from
 views.
 """
 
-from __future__ import unicode_literals
 
-from timesketch.lib.aggregators import interface, manager
+from timesketch.lib.aggregators import manager
+from timesketch.lib.aggregators import interface
 
 
 class ManualFeedAggregation(interface.BaseAggregator):
@@ -63,8 +63,14 @@ class ManualFeedAggregation(interface.BaseAggregator):
             return self.title
         return "Results From A Manually Fed Table"
 
+    # pylint: disable=arguments-differ
     def run(
-        self, data, title="", supported_charts="table", field=None, order_field="count"
+        self,
+        data: list,
+        title: str = "",
+        supported_charts: str = "table",
+        field: str = "",
+        order_field: str = "count",
     ):
         """Run the aggregation.
 

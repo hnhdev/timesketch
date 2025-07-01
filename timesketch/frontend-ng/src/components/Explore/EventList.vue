@@ -1,5 +1,5 @@
 <!--
-Copyright 2023 Google Inc. All rights reserved.
+Copyright 2025 Google Inc. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -15,6 +15,15 @@ limitations under the License.
 -->
 <template>
   <div>
+    <v-alert
+      v-model="showBanner"
+      dense
+      dismissible
+      type="info"
+    >
+      Data may be incomplete. Some timelines are still loading.
+    </v-alert>
+
     <v-dialog v-model="exportDialog" width="700">
       <v-card flat class="pa-5">
         <v-progress-circular indeterminate size="20" width="1"></v-progress-circular>
@@ -24,20 +33,114 @@ limitations under the License.
 
     <div v-if="!eventList.objects.length && !searchInProgress" class="ml-3">
       <p>
-        Your search <span v-if="currentQueryString">"{{ currentQueryString }}"</span> did not match any events.
+        Your search <span v-if="currentQueryString">'{{ currentQueryString }}'</span
+        ><span v-if="filterChips.length"> in combination with the selected filter terms</span> did not match any events.
+      </p>
+      <p>
+        <v-dialog v-model="saveSearchMenu" v-if="!disableSaveSearch" width="500">
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn small depressed v-bind="attrs" v-on="on" title="Save Search">
+              <v-icon left small>mdi-content-save-outline</v-icon>
+              Save search
+            </v-btn>
+          </template>
+
+          <v-card class="pa-4">
+            <h3>Save Search</h3>
+            <br />
+            <v-text-field
+              clearable
+              v-model="saveSearchFormName"
+              required
+              placeholder="Name your saved search"
+              outlined
+              dense
+              autofocus
+              @focus="$event.target.select()"
+              :rules="saveSearchNameRules"
+            >
+            </v-text-field>
+            <v-card-actions>
+              <v-spacer></v-spacer>
+              <v-btn text @click="saveSearchMenu = false"> Cancel </v-btn>
+              <v-btn
+                text
+                color="primary"
+                @click="saveSearch"
+                :disabled="!saveSearchFormName || saveSearchFormName.length > 255"
+              >
+                Save
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
       </p>
       <p>Suggestions:</p>
-      <li>Try different keywords.</li>
-      <li>Try more general keywords.</li>
-      <li>Try fewer keywords.</li>
+      <ul>
+        <li>Try different keywords<span v-if="filterChips.length"> or filter terms</span>.</li>
+        <li>Try more general keywords.</li>
+        <li>Try fewer keywords<span v-if="filterChips.length"> or filter terms</span>.</li>
+      </ul>
     </div>
+
+    <div v-if="highlightEvent" class="mt-4">
+      <strong>Showing context for event:</strong>
+      <v-sheet class="d-flex flex-wrap mt-1 mb-5">
+        <v-sheet class="flex-1-0">
+          <span style="width: 200px" v-bind:style="getTimelineColor(highlightEvent)" class="datetime-table-cell pa-2">
+            {{ highlightEvent._source.timestamp | formatTimestamp | toISO8601 }}
+          </span>
+        </v-sheet>
+
+        <v-sheet class="">
+          <span class="datetime-table-cell pa-2">
+            {{ highlightEvent._source.message }}
+          </span>
+        </v-sheet>
+      </v-sheet>
+    </div>
+
+    <div class="ts-event-list-container">
+      <v-card
+        v-if="(eventList.objects.length > 0 || searchInProgress) && userSettings.eventSummarization && !eventList.meta.summaryError"
+        class="ts-ai-summary-card"
+        outlined
+      >
+        <v-card-title class="ts-ai-summary-card-title">
+          <v-btn icon small @click="toggleSummary" class="ts-ai-summary-fold-btn">
+            <v-icon>{{ summaryCollapsed ? 'mdi-chevron-down' : 'mdi-chevron-up' }}</v-icon>
+          </v-btn>
+          <v-icon small color="primary" class="ml-1 mr-2 ts-ai-summary-icon">mdi-shimmer</v-icon>
+          <div class="ts-ai-summary-text-group">
+            <span class="ts-ai-summary-title">AI Summary</span>
+            <span v-if="eventList.objects.length > 0" class="ts-ai-summary-subtitle">
+              (for {{ eventList.objects.length }} events in this view)
+            </span>
+          </div>
+          <v-btn icon small class="ml-1 ts-ai-summary-info-btn" :title="summaryInfoMessage">
+            <v-icon small>mdi-information-outline</v-icon>
+          </v-btn>
+        </v-card-title>
+
+        <v-card-text v-show="!summaryCollapsed" class="ts-ai-summary-text">
+          <div v-if="isSummaryLoading || !eventList.meta.summary">
+            <div class="ts-summary-placeholder-line shimmer"></div>
+            <div class="ts-summary-placeholder-line shimmer short"></div>
+            <div class="ts-summary-placeholder-line shimmer long"></div>
+          </div>
+          <div v-else v-html="eventList.meta.summary"></div>
+        </v-card-text>
+
+      </v-card>
+    </div>
+
 
     <div v-if="eventList.objects.length || searchInProgress">
       <v-data-table
         v-model="selectedEvents"
         :headers="headers"
         :items="eventList.objects"
-        :footer-props="{ 'items-per-page-options': [50, 100, 250, 500, 1000], 'show-current-page': true }"
+        :footer-props="{ 'items-per-page-options': [10, 40, 80, 100, 200, 500], 'show-current-page': true }"
         :loading="searchInProgress"
         :options.sync="tableOptions"
         :server-items-length="totalHitsForPagination"
@@ -48,326 +151,360 @@ limitations under the License.
         must-sort
         :sort-desc.sync="sortOrderAsc"
         @update:sort-desc="sortEvents"
-        sort-by="_source.datetime"
+        sort-by="_source.timestamp"
         :hide-default-footer="totalHits < 11 || disablePagination"
         :expanded="expandedRows"
         :dense="displayOptions.isCompact"
         fixed-header
       >
-        <template v-slot:top="{ pagination, options, updateOptions }">
-          <v-toolbar dense flat color="transparent">
-            <div v-if="!selectedEvents.length">
-              <span style="display: inline-block; min-width: 200px">
-                <small>{{ fromEvent }}-{{ toEvent }} of {{ totalHits }} events ({{ totalTime }}s)</small>
-              </span>
+          <template v-slot:top="{ pagination, options, updateOptions }">
+            <v-toolbar dense flat color="transparent">
+              <div v-if="!selectedEvents.length">
+                <span style="display: inline-block; min-width: 200px">
+                  <small>{{ fromEvent }}-{{ toEvent }} of {{ totalHits }} events ({{ totalTime }}s)</small>
+                </span>
 
-              <v-dialog v-model="saveSearchMenu" v-if="!disableSaveSearch" width="500">
-                <template v-slot:activator="{ on, attrs }">
-                  <v-btn icon v-bind="attrs" v-on="on">
-                    <v-icon title="Save current search">mdi-content-save-outline</v-icon>
-                  </v-btn>
-                </template>
-
-                <v-card class="pa-4">
-                  <h3>Save Search</h3>
-                  <br/>
-                  <v-text-field
-                    clearable
-                    v-model="saveSearchFormName"
-                    required
-                    placeholder="Name your saved search"
-                    outlined
-                    dense
-                    autofocus
-                    @focus="$event.target.select()"
-                    :rules="saveSearchNameRules"
-                  >
-                  </v-text-field>
-                  <v-card-actions>
-                    <v-spacer></v-spacer>
-                    <v-btn text @click="saveSearchMenu = false"> Cancel </v-btn>
-                    <v-btn
-                      text
-                      color="primary"
-                      @click="saveSearch"
-                      :disabled="!saveSearchFormName || saveSearchFormName.length > 255"
-                    >
-                      Save
+                <v-dialog v-model="saveSearchMenu" v-if="!disableSaveSearch" width="500">
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-btn icon v-bind="attrs" v-on="on">
+                      <v-icon title="Save current search">mdi-content-save-outline</v-icon>
                     </v-btn>
-                  </v-card-actions>
-                </v-card>
-              </v-dialog>
+                  </template>
 
-              <template>
-                <v-btn icon @click="showHistogram = !showHistogram" v-if="!disableHistogram">
-                  <v-icon title="Toggle event histogram">mdi-chart-bar</v-icon>
-                </v-btn>
-              </template>
+                  <v-card class="pa-4">
+                    <h3>Save Search</h3>
+                    <br />
+                    <v-text-field
+                      clearable
+                      v-model="saveSearchFormName"
+                      required
+                      placeholder="Name your saved search"
+                      outlined
+                      dense
+                      autofocus
+                      @focus="$event.target.select()"
+                      :rules="saveSearchNameRules"
+                    >
+                    </v-text-field>
+                    <v-card-actions>
+                      <v-spacer></v-spacer>
+                      <v-btn text @click="saveSearchMenu = false"> Cancel </v-btn>
+                      <v-btn
+                        text
+                        color="primary"
+                        @click="saveSearch"
+                        :disabled="!saveSearchFormName || saveSearchFormName.length > 255"
+                      >
+                        Save
+                      </v-btn>
+                    </v-card-actions>
+                  </v-card>
+                </v-dialog>
 
-
-              <v-btn icon @click="exportSearchResult()">
-                <v-icon title="Download current view as CSV">mdi-download</v-icon>
-              </v-btn>
-
-              <v-menu v-if="!disableSettings" offset-y :close-on-content-click="false">
-                <template v-slot:activator="{ on, attrs }">
-                  <v-btn icon v-bind="attrs" v-on="on">
-                    <v-icon title="View settings">mdi-dots-horizontal</v-icon>
+                <template>
+                  <v-btn icon @click="showHistogram = !showHistogram" v-if="!disableHistogram">
+                    <v-icon title="Toggle event histogram">mdi-chart-bar</v-icon>
                   </v-btn>
                 </template>
 
-                <v-card outlined max-width="475" class="mx-auto">
-                  <v-list subheader two-line flat dense>
-                    <v-subheader>Density</v-subheader>
+                <v-dialog v-model="columnDialog" v-if="!disableColumns" max-width="500px" scrollable>
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-btn icon v-bind="attrs" v-on="on">
+                      <v-icon title="Modify columns">mdi-view-column-outline</v-icon>
+                    </v-btn>
+                  </template>
 
-                    <v-list-item-group>
-                      <v-list-item :ripple="false">
-                        <template>
-                          <v-list-item-action>
-                            <v-radio-group v-model="displayOptions.isCompact">
-                              <v-radio :value="false"></v-radio>
-                            </v-radio-group>
-                          </v-list-item-action>
+                  <v-card height="50vh">
+                    <v-card-title>Select columns</v-card-title>
 
-                          <v-list-item-content>
-                            <v-list-item-title>Comfortable</v-list-item-title>
-                            <v-list-item-subtitle>More space between rows</v-list-item-subtitle>
-                          </v-list-item-content>
-                        </template>
-                      </v-list-item>
+                    <v-card-text>
+                      <v-text-field
+                        v-model="searchColumns"
+                        append-icon="mdi-magnify"
+                        label="Search"
+                        single-line
+                        hide-details
+                      ></v-text-field>
+                      <br />
+                      <v-data-table
+                        v-model="selectedFields"
+                        :headers="columnHeaders"
+                        :items="meta.mappings"
+                        :search="searchColumns"
+                        :hide-default-footer="true"
+                        item-key="field"
+                        disable-pagination
+                        show-select
+                        dense
+                        @input="updateSelectedFields"
+                      >
+                      </v-data-table>
+                    </v-card-text>
 
-                      <v-list-item :ripple="false">
-                        <template>
-                          <v-list-item-action>
-                            <v-radio-group v-model="displayOptions.isCompact">
-                              <v-radio :value="true"></v-radio>
-                            </v-radio-group>
-                          </v-list-item-action>
-
-                          <v-list-item-content>
-                            <v-list-item-title>Compact</v-list-item-title>
-                            <v-list-item-subtitle>Less space between rows</v-list-item-subtitle>
-                          </v-list-item-content>
-                        </template>
-                      </v-list-item>
-                    </v-list-item-group>
                     <v-divider></v-divider>
 
-                    <v-list subheader two-line flat>
-                      <v-subheader>Misc</v-subheader>
+                    <v-card-actions>
+                      <v-spacer></v-spacer>
+                      <v-btn text @click="selectedFields = [{ field: 'message', type: 'text' }]"> Reset </v-btn>
+                      <v-btn text color="primary" @click="columnDialog = false"> Set columns </v-btn>
+                    </v-card-actions>
+                  </v-card>
+                </v-dialog>
+
+                <v-btn icon @click="exportSearchResult()">
+                  <v-icon title="Download current view as CSV">mdi-download</v-icon>
+                </v-btn>
+
+                <v-menu v-if="!disableSettings" offset-y :close-on-content-click="false">
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-btn icon v-bind="attrs" v-on="on">
+                      <v-icon title="View settings">mdi-dots-horizontal</v-icon>
+                    </v-btn>
+                  </template>
+
+                  <v-card outlined max-width="475" class="mx-auto">
+                    <v-list subheader two-line flat dense>
+                      <v-subheader>Density</v-subheader>
+
                       <v-list-item-group>
                         <v-list-item :ripple="false">
-                          <v-list-item-action>
-                            <v-switch dense color="" v-model="displayOptions.showTags"></v-switch>
-                          </v-list-item-action>
-                          <v-list-item-content>
-                            <v-list-item-title>Tags</v-list-item-title>
-                            <v-list-item-subtitle>Show tags</v-list-item-subtitle>
-                          </v-list-item-content>
+                          <template>
+                            <v-list-item-action>
+                              <v-radio-group v-model="displayOptions.isCompact">
+                                <v-radio :value="false"></v-radio>
+                              </v-radio-group>
+                            </v-list-item-action>
+
+                            <v-list-item-content>
+                              <v-list-item-title>Comfortable</v-list-item-title>
+                              <v-list-item-subtitle>More space between rows</v-list-item-subtitle>
+                            </v-list-item-content>
+                          </template>
                         </v-list-item>
-                      </v-list-item-group>
-                      <v-list-item-group>
+
                         <v-list-item :ripple="false">
-                          <v-list-item-action>
-                            <v-switch dense v-model="displayOptions.showEmojis"></v-switch>
-                          </v-list-item-action>
-                          <v-list-item-content>
-                            <v-list-item-title>Emojis</v-list-item-title>
-                            <v-list-item-subtitle>Show emojis</v-list-item-subtitle>
-                          </v-list-item-content>
+                          <template>
+                            <v-list-item-action>
+                              <v-radio-group v-model="displayOptions.isCompact">
+                                <v-radio :value="true"></v-radio>
+                              </v-radio-group>
+                            </v-list-item-action>
+
+                            <v-list-item-content>
+                              <v-list-item-title>Compact</v-list-item-title>
+                              <v-list-item-subtitle>Less space between rows</v-list-item-subtitle>
+                            </v-list-item-content>
+                          </template>
                         </v-list-item>
                       </v-list-item-group>
-                      <v-list-item-group>
-                        <v-list-item :ripple="false">
-                          <v-list-item-action>
-                            <v-switch dense v-model="displayOptions.showTimelineName"></v-switch>
-                          </v-list-item-action>
-                          <v-list-item-content>
-                            <v-list-item-title>Timeline name</v-list-item-title>
-                            <v-list-item-subtitle>Show timeline name</v-list-item-subtitle>
-                          </v-list-item-content>
-                        </v-list-item>
-                      </v-list-item-group>
+                      <v-divider></v-divider>
+
+                      <v-list subheader two-line flat>
+                        <v-subheader>Misc</v-subheader>
+                        <v-list-item-group>
+                          <v-list-item :ripple="false">
+                            <v-list-item-action>
+                              <v-switch dense color="" v-model="displayOptions.showTags"></v-switch>
+                            </v-list-item-action>
+                            <v-list-item-content>
+                              <v-list-item-title>Tags</v-list-item-title>
+                              <v-list-item-subtitle>Show tags</v-list-item-subtitle>
+                            </v-list-item-content>
+                          </v-list-item>
+                        </v-list-item-group>
+                        <v-list-item-group>
+                          <v-list-item :ripple="false">
+                            <v-list-item-action>
+                              <v-switch dense v-model="displayOptions.showEmojis"></v-switch>
+                            </v-list-item-action>
+                            <v-list-item-content>
+                              <v-list-item-title>Emojis</v-list-item-title>
+                              <v-list-item-subtitle>Show emojis</v-list-item-subtitle>
+                            </v-list-item-content>
+                          </v-list-item>
+                        </v-list-item-group>
+                        <v-list-item-group>
+                          <v-list-item :ripple="false">
+                            <v-list-item-action>
+                              <v-switch dense v-model="displayOptions.showTimelineName"></v-switch>
+                            </v-list-item-action>
+                            <v-list-item-content>
+                              <v-list-item-title>Timeline name</v-list-item-title>
+                              <v-list-item-subtitle>Show timeline name</v-list-item-subtitle>
+                            </v-list-item-content>
+                          </v-list-item>
+                        </v-list-item-group>
+                      </v-list>
                     </v-list>
-                  </v-list>
-                </v-card>
-              </v-menu>
-            </div>
-            <div v-else>
-              <small class="mr-2">Actions:</small>
-              <v-btn x-small outlined @click="toggleMultipleStars()">
-                <v-icon left color="amber">mdi-star</v-icon>
-                Toggle star
-              </v-btn>
-            </div>
-
-            <v-spacer></v-spacer>
-
-            <v-data-footer
-              v-if="totalHits > 11 && !disablePagination"
-              :pagination="pagination"
-              :options="options"
-              @update:options="updateOptions"
-              :show-current-page="true"
-              :items-per-page-options="[50, 100, 250, 500, 1000]"
-              items-per-page-text="Rows per page:"
-              style="border: 0"
-              class="mr-n3"
-            ></v-data-footer>
-          </v-toolbar>
-
-          <v-card v-if="showHistogram" outlined class="my-3">
-            <v-toolbar dense flat color="transparent">
-              <v-spacer></v-spacer>
-              <v-btn v-if="timeFilterChips.length" text color="primary" @click="removeChips(timeFilterChips)">
-                reset
-              </v-btn>
-              <v-btn icon @click="showHistogram = false">
-                <v-icon title="Close histogram">mdi-close</v-icon>
-              </v-btn>
-            </v-toolbar>
-            <ts-bar-chart
-              :chart-data="eventList.meta.count_over_time"
-              @addChip="addChipFromHistogram($event)"
-            ></ts-bar-chart>
-          </v-card>
-        </template>
-
-        <!-- Event details -->
-        <template v-slot:expanded-item="{ headers, item }">
-          <td :colspan="headers.length">
-            <!-- Details -->
-            <v-container v-if="item.showDetails" fluid class="mt-4">
-              <ts-event-detail :event="item"></ts-event-detail>
-            </v-container>
-
-            <!-- Time bubble -->
-            <v-divider v-if="item.showDetails && item.deltaDays"></v-divider>
-            <div v-if="item.deltaDays > 0" class="ml-7">
-              <div
-                class="ts-time-bubble-vertical-line ts-time-bubble-vertical-line-color"
-                v-bind:style="getTimeBubbleColor(item)"
-              ></div>
-              <div class="ts-time-bubble ts-time-bubble-color" v-bind:style="getTimeBubbleColor(item)">
-                <div class="ts-time-bubble-text">
-                  <b>{{ item.deltaDays | compactNumber }}</b> days
-                </div>
+                  </v-card>
+                </v-menu>
               </div>
-              <div
-                class="ts-time-bubble-vertical-line ts-time-bubble-vertical-line-color"
-                v-bind:style="getTimeBubbleColor(item)"
-              ></div>
-            </div>
-          </td>
-        </template>
+              <div v-else>
+                <small class="mr-2">Actions:</small>
+                <v-btn x-small outlined @click="toggleMultipleStars()">
+                  <v-icon left color="amber">mdi-star</v-icon>
+                  Toggle star
+                </v-btn>
+              </div>
 
-        <!-- Actions field -->
-        <template v-slot:item.actions="{ item }">
-          <v-btn small icon @click="toggleStar(item)">
-            <v-icon title="Toggle star status" v-if="item._source.label.includes('__ts_star')" color="amber"
-              >mdi-star</v-icon
-            >
-            <v-icon title="Toggle star status" v-else>mdi-star-outline</v-icon>
-          </v-btn>
+              <v-spacer></v-spacer>
 
-          <!-- Tag menu -->
-          <ts-event-tag-menu :event="item"></ts-event-tag-menu>
+              <v-data-footer
+                v-if="totalHits > 11 && !disablePagination"
+                :pagination="pagination"
+                :options="options"
+                @update:options="updateOptions"
+                :show-current-page="true"
+                :items-per-page-options="[10, 40, 80, 100, 200, 500]"
+                items-per-page-text="Rows per page:"
+                style="border: 0"
+                class="mr-n3"
+              ></v-data-footer>
+            </v-toolbar>
 
-          <!-- Action sub-menu -->
-          <ts-event-action-menu :event="item" @showContextWindow="showContextWindow($event)"></ts-event-action-menu>
-        </template>
+            <v-card v-if="showHistogram" outlined class="my-3">
+              <v-toolbar dense flat color="transparent">
+                <v-spacer></v-spacer>
+                <v-btn v-if="timeFilterChips.length" text color="primary" @click="removeChips(timeFilterChips)">
+                  reset
+                </v-btn>
+                <v-btn icon @click="showHistogram = false">
+                  <v-icon title="Close histogram">mdi-close</v-icon>
+                </v-btn>
+              </v-toolbar>
+              <ts-bar-chart
+                :chart-data="eventList.meta.count_over_time"
+                @addChip="addChipFromHistogram($event)"
+              ></ts-bar-chart>
+            </v-card>
+          </template>
 
-        <!-- Datetime field with action buttons -->
-        <template v-slot:item._source.datetime="{ item }">
-          <div v-bind:style="getTimelineColor(item)" class="datetime-table-cell">
-            {{ item._source.datetime | formatDatetimeToString }}
-          </div>
-        </template>
+          <!-- Event details -->
+          <template v-slot:expanded-item="{ headers, item }">
+            <td :colspan="headers.length">
+              <!-- Details -->
+              <v-container v-if="item.showDetails" fluid class="mt-4">
+                <ts-event-detail :event="item"></ts-event-detail>
+              </v-container>
 
-        <!-- Generic slot for any field type. Adds tags and emojis to the first column. -->
-        <template v-slot:item._source="{ item }">
-          <div
-            class="ts-event-field-container"
-            style="cursor: pointer"
-            @click="toggleDetailedEvent(item)"
-          >
-            <span
-              :class="{
-                'ts-event-field-line-clamp': true,
-                'ts-event-field-highlight': item._id === highlightEventId,
-              }"
-            >
-              <!-- Tags -->
-              <span
-                v-if="
-                  displayOptions.showTags &&
-                  ('tag' in item._source ? item._source.tag.length > 0 : false)
-                "
+              <!-- Time bubble -->
+              <v-divider v-if="item.showDetails && item.deltaDays"></v-divider>
+              <div v-if="item.deltaDays > 0" class="ml-7">
+                <div
+                  class="ts-time-bubble-vertical-line ts-time-bubble-vertical-line-color"
+                  v-bind:style="getTimeBubbleColor(item)"
+                ></div>
+                <div class="ts-time-bubble ts-time-bubble-color" v-bind:style="getTimeBubbleColor(item)">
+                  <div class="ts-time-bubble-text">
+                    <b>{{ item.deltaDays | compactNumber }}</b> days
+                  </div>
+                </div>
+                <div
+                  class="ts-time-bubble-vertical-line ts-time-bubble-vertical-line-color"
+                  v-bind:style="getTimeBubbleColor(item)"
+                ></div>
+              </div>
+            </td>
+          </template>
+
+          <!-- Actions field -->
+          <template v-slot:item.actions="{ item }">
+            <v-btn small icon @click="toggleStar(item)">
+              <v-icon title="Toggle star status" v-if="item._source.label.includes('__ts_star')" color="amber"
+                >mdi-star</v-icon
               >
-                <ts-event-tags class="ts-event-tags" :item="item" :tagConfig="tagConfig" :showDetails="item.showDetails"></ts-event-tags>
-              </span>
-              <!-- Emojis -->
-              <span v-if="displayOptions.showEmojis">
+              <v-icon title="Toggle star status" v-else>mdi-star-outline</v-icon>
+            </v-btn>
+
+            <!-- Tag menu -->
+            <ts-event-tag-menu :event="item"></ts-event-tag-menu>
+
+            <!-- Action sub-menu -->
+            <ts-event-action-menu :event="item" @showContextWindow="showContextWindow($event)"></ts-event-action-menu>
+          </template>
+
+          <!-- Datetime field with action buttons -->
+          <template v-slot:item._source.timestamp="{ item }">
+            <div v-bind:style="getTimelineColor(item)" class="datetime-table-cell">
+              {{ item._source.timestamp | formatTimestamp | toISO8601 }}
+            </div>
+          </template>
+
+          <!-- Generic slot for any field type. Adds tags and emojis to the first column. -->
+          <template v-for="(field, index) in headers" v-slot:[getFieldName(field.text)]="{ item }">
+            <div
+              :key="field.text"
+              class="ts-event-field-container"
+              style="cursor: pointer"
+              @click="toggleDetailedEvent(item)"
+            >
+              <span
+                :class="{
+                  'ts-event-field-ellipsis': field.text === 'message',
+                  'ts-event-field-highlight': item._id === highlightEventId,
+                }"
+              >
+                <!-- Tags -->
                 <span
-                  class="mr-2"
-                  v-for="emoji in item._source.__ts_emojis"
-                  :key="emoji"
-                  v-html="emoji + ';'"
-                  :title="meta.emojis[emoji]"
+                  v-if="
+                    displayOptions.showTags &&
+                    index === 3 &&
+                    ('tag' in item._source ? item._source.tag.length > 0 : false)
+                  "
                 >
+                  <ts-event-tags :item="item" :tagConfig="tagConfig" :showDetails="item.showDetails"></ts-event-tags>
                 </span>
-              </span>
-              <span>
-                <b>timestamp_desc</b>:<code>{{ item._source.timestamp_desc }}</code>
-              </span>
-              <span>
-                <b>data_type</b>:<code>{{ item._source.data_type }}</code>
-              </span>
-              <span v-for="(value, key) in item._source" v-bind:key="key">
-                <span v-if="isIncluded(key, value)">
-                  <b>{{ key }}</b>:<code>{{ value }}</code>
+                <!-- Emojis -->
+                <span v-if="displayOptions.showEmojis && index === 3">
+                  <span
+                    class="mr-2"
+                    v-for="emoji in item._source.__ts_emojis"
+                    :key="emoji"
+                    v-html="emoji + ';'"
+                    :title="meta.emojis[emoji]"
+                  >
+                  </span>
                 </span>
+                <span>{{ item._source[field.text] }}</span>
               </span>
-            </span>
-          </div>
-        </template>
+            </div>
+          </template>
 
-        <!-- Timeline name field -->
-        <template v-slot:item.timeline_name="{ item }">
-          <v-chip label style="margin-top: 1px; margin-bottom: 1px; font-size: 0.8em">
-            <span class="timeline-name-ellipsis" style="width: 130px; text-align: center">{{
-              getTimeline(item).name
-            }}</span></v-chip
-          >
-        </template>
+          <!-- Timeline name field -->
+          <template v-slot:item.timeline_name="{ item }">
+            <v-chip label style="margin-top: 1px; margin-bottom: 1px; font-size: 0.8em">
+              <span class="timeline-name-ellipsis" style="width: 130px; text-align: center">{{
+                getTimeline(item).name
+              }}</span></v-chip>
+          </template>
 
-        <!-- Comment field -->
-        <template v-slot:item._source.comment="{ item }">
-          <div class="d-inline-block">
-            <v-btn icon small @click="toggleDetailedEvent(item)" v-if="item._source.comment.length">
-              <v-badge :offset-y="10" :offset-x="10" bordered :content="item._source.comment.length">
-                <v-icon :title="item['showDetails'] ? 'Close event &amp; comments' : 'Open event &amp; comments'" small>
-                  mdi-comment-text-multiple-outline
-                </v-icon>
-              </v-badge>
-            </v-btn>
-          </div>
+          <!-- Comment field -->
+          <template v-slot:item._source.comment="{ item }">
+            <div class="d-inline-block">
+              <v-btn icon small @click="toggleDetailedEvent(item)" v-if="item._source.comment.length">
+                <v-badge :offset-y="10" :offset-x="10" bordered :content="item._source.comment.length">
+                  <v-icon :title="item['showDetails'] ? 'Close event &amp; comments' : 'Open event &amp; comments'" small>
+                    mdi-comment-text-multiple-outline
+                  </v-icon>
+                </v-badge>
+              </v-btn>
+            </div>
 
-          <div v-if="item['showDetails'] && !item._source.comment.length && !item.showComments" class="d-inline-block">
-            <v-btn icon small @click="newComment(item)">
-              <v-icon title="Add a comment"> mdi-comment-plus-outline </v-icon>
-            </v-btn>
-          </div>
+            <div v-if="item['showDetails'] && !item._source.comment.length && !item.showComments" class="d-inline-block">
+              <v-btn icon small @click="newComment(item)">
+                <v-icon title="Add a comment"> mdi-comment-plus-outline </v-icon>
+              </v-btn>
+            </div>
 
-          <div v-if="item['showDetails'] && !item._source.comment.length && item.showComments" class="d-inline-block">
-            <v-btn icon small @click="item.showComments = false">
-              <v-icon title="Close comments"> mdi-comment-remove-outline </v-icon>
-            </v-btn>
-          </div>
-        </template>
-      </v-data-table>
+            <div v-if="item['showDetails'] && !item._source.comment.length && item.showComments" class="d-inline-block">
+              <v-btn icon small @click="item.showComments = false">
+                <v-icon title="Close comments"> mdi-comment-remove-outline </v-icon>
+              </v-btn>
+            </div>
+          </template>
+        </v-data-table>
+      </div>
     </div>
-  </div>
 </template>
 
 <script>
@@ -416,7 +553,7 @@ export default {
     },
     itemsPerPage: {
       type: Number,
-      default: 50,
+      default: 40,
     },
     disableSaveSearch: {
       type: Boolean,
@@ -454,8 +591,10 @@ export default {
       tableOptions: {
         itemsPerPage: this.itemsPerPage,
       },
+      isSummaryLoading: false,
       currentItemsPerPage: this.itemsPerPage,
       expandedRows: [],
+      selectedFields: [{ field: 'message', type: 'text' }],
       searchColumns: '',
       columnDialog: false,
       saveSearchMenu: false,
@@ -487,9 +626,16 @@ export default {
       showHistogram: false,
       branchParent: null,
       sortOrderAsc: true,
+      summaryCollapsed: false,
+      showBanner: false,
     }
   },
   computed: {
+    summaryInfoMessage() {
+      const totalEvents = this.eventList.meta.summary_event_count
+      const uniqueEvents = this.eventList.meta.summary_unique_event_count
+      return `[experimental] This summary is based on the message field on your current page (${totalEvents} rows, ${uniqueEvents} unique message fields).`
+    },
     sketch() {
       return this.$store.state.sketch
     },
@@ -530,6 +676,9 @@ export default {
     currentSearchNode() {
       return this.$store.state.currentSearchNode
     },
+    userSettings() {
+      return this.$store.state.settings
+    },
     headers() {
       let baseHeaders = [
         {
@@ -545,8 +694,8 @@ export default {
         {
           text: 'Datetime (UTC) ',
           align: 'start',
-          value: '_source.datetime',
-          width: '170',
+          value: '_source.timestamp',
+          width: '200',
           sortable: true,
         },
         {
@@ -556,14 +705,21 @@ export default {
         },
       ]
       let extraHeaders = []
-      let header = {
-        text: 'Event',
-        align: 'start',
-        value: '_source',
-        sortable: false,
-        width: '100%',
-      }
-      extraHeaders.unshift(header)
+      this.selectedFields.forEach((field) => {
+        let header = {
+          text: field.field,
+          align: 'start',
+          value: '_source.' + field.field,
+          sortable: false,
+        }
+        if (field.field === 'message') {
+          header.width = '100%'
+          extraHeaders.unshift(header)
+        } else {
+          extraHeaders.push(header)
+        }
+      })
+
       // Extend the column headers from position 3 (after the actions column)
       baseHeaders.splice(3, 0, ...extraHeaders)
 
@@ -580,8 +736,18 @@ export default {
     activeContext() {
       return this.$store.state.activeContext
     },
+    settings() {
+      return this.$store.state.settings
+    },
+    filterChips: function () {
+      return this.currentQueryFilter.chips.filter((chip) => chip.type === 'label' || chip.type === 'term')
+    },
   },
   methods: {
+    toggleSummary() {
+          this.summaryCollapsed = !this.summaryCollapsed;
+          localStorage.setItem('aiSummaryCollapsed', String(this.summaryCollapsed));
+    },
     sortEvents(sortAsc) {
       if (sortAsc) {
         this.currentQueryFilter.order = 'asc'
@@ -589,6 +755,9 @@ export default {
         this.currentQueryFilter.order = 'desc'
       }
       this.search(true, true, false)
+    },
+    getFieldName: function (field) {
+      return 'item._source.' + field
     },
     toggleDetailedEvent: function (row) {
       let index = this.expandedRows.findIndex((x) => x._id === row._id)
@@ -628,8 +797,8 @@ export default {
           return
         }
         let prevEvent = this.eventList.objects[index - 1]
-        let timestampMillis = this.$options.filters.formatDatetimeToUnix(event._source.datetime)
-        let prevTimestampMillis = this.$options.filters.formatDatetimeToUnix(prevEvent._source.datetime)
+        let timestampMillis = this.$options.filters.formatTimestamp(event._source.timestamp)
+        let prevTimestampMillis = this.$options.filters.formatTimestamp(prevEvent._source.timestamp)
         let timestamp = Math.floor(timestampMillis / 1000)
         let prevTimestamp = Math.floor(prevTimestampMillis / 1000)
         let delta = Math.floor(timestamp - prevTimestamp)
@@ -644,7 +813,13 @@ export default {
       })
     },
     getTimeline: function (event) {
-      let timeline = this.sketch.active_timelines.find((timeline) => timeline.id === event._source.__ts_timeline_id)
+      let isLegacy = this.meta.indices_metadata[event._index].is_legacy
+      let timeline
+      if (isLegacy) {
+        timeline = this.sketch.active_timelines.find((timeline) => timeline.searchindex.index_name === event._index)
+      } else {
+        timeline = this.sketch.active_timelines.find((timeline) => timeline.id === event._source.__ts_timeline_id)
+      }
       return timeline
     },
     getTimelineColor(event) {
@@ -664,16 +839,6 @@ export default {
         'background-color': backgroundColor,
       }
     },
-    isIncluded(key, value) {
-      const hiddenKeys = ["datetime", "timestamp_desc", "tag", "label", "comment", "data_type", "domain", "hostname"]
-      const regEx = /^[0-9]+-[0-9]+-[0-9]+[T][0-9]+[:][0-9]+[:][0-9]+/gm
-      if (value == null || key.startsWith("__") || hiddenKeys.includes(key) || regEx.exec(value)) {
-        return false
-      }
-      else {
-        return true
-      }
-    },
     getTimeBubbleColor() {
       let backgroundColor = '#f5f5f5'
       if (this.$vuetify.theme.dark) {
@@ -686,14 +851,22 @@ export default {
     getAllIndices: function () {
       let allIndices = []
       this.sketch.active_timelines.forEach((timeline) => {
-        allIndices.push(timeline.id)
+        let isLegacy = this.meta.indices_metadata[timeline.searchindex.index_name].is_legacy
+        if (isLegacy) {
+          allIndices.push(timeline.searchindex.index_name)
+        } else {
+          allIndices.push(timeline.id)
+        }
       })
       return allIndices
     },
     search: function (resetPagination = true, incognito = false, parent = false) {
+      this.isSummaryLoading = true
+
       // Exit early if there are no indices selected.
       if (this.currentQueryFilter.indices && !this.currentQueryFilter.indices.length) {
         this.eventList = emptyEventList()
+        this.isSummaryLoading = false
         return
       }
 
@@ -719,6 +892,9 @@ export default {
         this.currentQueryFilter.size = this.tableOptions.itemsPerPage
         this.currentQueryFilter.from = 0
       }
+
+      // Update with selected fields
+      this.currentQueryFilter.fields = this.selectedFields
 
       let formData = {}
       if (this.currentQueryDsl) {
@@ -753,10 +929,13 @@ export default {
       formData['facet'] = this.activeContext.facetId
       formData['question'] = this.activeContext.questionId
 
+      formData['include_processing_timelines'] = this.settings.showProcessingTimelineEvents
+
       ApiClient.search(this.sketch.id, formData)
         .then((response) => {
           this.eventList.objects = response.data.objects
           this.eventList.meta = response.data.meta
+          this.updateShowBanner()
           this.searchInProgress = false
           EventBus.$emit('updateCountPerTimeline', response.data.meta.count_per_timeline)
           this.$emit('countPerTimeline', response.data.meta.count_per_timeline)
@@ -769,10 +948,42 @@ export default {
             this.$store.dispatch('updateSearchHistory')
             this.branchParent = this.eventList.meta.search_node.id
           }
+          if (this.userSettings.eventSummarization  && this.eventList.objects.length > 0) {
+            this.fetchEventSummary()
+          }
         })
         .catch((e) => {
-          this.errorSnackBar('Sorry, there was a problem fetching your search results. Please try again.')
+          let msg = 'Sorry, there was a problem fetching your search results. Error: "' + e.response.data.message + '"'
+          if (
+            e.response.data.message.includes('too_many_nested_clauses') ||
+            e.response.data.message.includes('query_shard_exception')
+          ) {
+            msg =
+              'Sorry, your query is too complex. Use field-specific search (like "message:(<query terms>)") and try again.'
+            this.warningSnackBar(msg)
+          } else {
+            this.errorSnackBar(msg)
+          }
+          console.error('Error message: ' + msg)
           console.error(e)
+        })
+    },
+    fetchEventSummary: function() {
+      const formData = {
+        query: this.currentQueryString,
+        filter: this.currentQueryFilter,
+      }
+      ApiClient.llmRequest(this.sketch.id, 'llm_summarize', formData)
+        .then((response) => {
+          this.$set(this.eventList.meta, 'summary', response.data.response)
+          this.$set(this.eventList.meta, 'summary_event_count', response.data.summary_event_count)
+          this.$set(this.eventList.meta, 'summary_unique_event_count', response.data.summary_unique_event_count)
+          this.isSummaryLoading = false
+        })
+        .catch((error) => {
+          console.error("Error fetching event summary:", error)
+          this.$set(this.eventList.meta, 'summaryError', true)
+          this.isSummaryLoading = false
         })
     },
     exportSearchResult: function () {
@@ -856,28 +1067,48 @@ export default {
       this.currentPage = this.tableOptions.page
       this.search(false, true)
     },
+    updateSelectedFields: function (value) {
+      // If we haven't fetched the field before, do an new search.
+      value.forEach((field) => {
+        if (!this.headers.filter((e) => e.field === field.field).length > 0) {
+          this.search(true, true)
+        }
+      })
+    },
+    removeField: function (index) {
+      this.selectedFields.splice(index, 1)
+    },
     toggleStar(event) {
+      let count = 0
       if (event._source.label.includes('__ts_star')) {
         event._source.label.splice(event._source.label.indexOf('__ts_star'), 1)
+        count = -1
       } else {
         event._source.label.push('__ts_star')
+        count = 1
       }
       ApiClient.saveEventAnnotation(this.sketch.id, 'label', '__ts_star', event, this.currentSearchNode)
-        .then((response) => {})
+        .then((response) => {
+          this.$store.dispatch('updateEventLabels', { label: '__ts_star', num: count })
+        })
         .catch((e) => {
           console.error(e)
         })
     },
     toggleMultipleStars: function () {
+      let netStarCountChange = 0
       this.selectedEvents.forEach((event) => {
         if (event._source.label.includes('__ts_star')) {
           event._source.label.splice(event._source.label.indexOf('__ts_star'), 1)
+          netStarCountChange--
         } else {
           event._source.label.push('__ts_star')
+          netStarCountChange++
         }
       })
       ApiClient.saveEventAnnotation(this.sketch.id, 'label', '__ts_star', this.selectedEvents, this.currentSearchNode)
         .then((response) => {
+          this.$store.dispatch('updateEventLabels', { label: '__ts_star', num: netStarCountChange })
           this.selectedEvents = []
         })
         .catch((e) => {})
@@ -891,6 +1122,15 @@ export default {
           this.$store.state.meta.views.push(newView)
         })
         .catch((e) => {})
+    },
+    updateShowBanner: function() {
+      // Show banner only when processing timelines are enabled and at
+      // least one enabled timeline is the "processing" state.
+      this.showBanner =
+        !!this.settings.showProcessingTimelineEvents &&
+        this.sketch.active_timelines
+          .filter(tl => this.$store.state.enabledTimelines.includes(tl.id))
+          .some(tl => tl.status && tl.status[0].status === 'processing')
     },
   },
   watch: {
@@ -917,6 +1157,10 @@ export default {
         let resetPagination = newQueryRequest['resetPagination'] || false
         let incognito = newQueryRequest['incognito'] || false
         let parent = newQueryRequest['parent'] || false
+        // Set additional fields. This is used when loading filter from a saved search.
+        if (this.currentQueryFilter.fields) {
+          this.selectedFields = this.currentQueryFilter.fields
+        }
         // Preserve user defined sort order.
         if (this.sortOrderAsc) {
           this.currentQueryFilter.order = 'asc'
@@ -927,12 +1171,25 @@ export default {
       },
       deep: true,
     },
+    'settings.showProcessingTimelineEvents': {
+      handler() {
+        this.updateShowBanner()
+      },
+    },
   },
   created() {
     if (Object.keys(this.queryRequest).length) {
       this.currentQueryString = this.queryRequest.queryString
       this.currentQueryFilter = { ...this.queryRequest.queryFilter } || defaultQueryFilter()
       this.currentQueryDsl = { ...this.queryRequest.queryDsl }
+      // Set additional fields when loading filter from a saved search.
+      if (this.currentQueryFilter.fields) {
+        this.selectedFields = this.currentQueryFilter.fields
+      }
+      const storedState = localStorage.getItem('aiSummaryCollapsed');
+      if (storedState === 'true') {
+        this.summaryCollapsed = true;
+      }
       this.search()
     }
   },
@@ -940,32 +1197,30 @@ export default {
 </script>
 
 <style lang="scss">
-.ts-event-tags span {
-  height: 20px !important;
-}
-
 .ts-event-field-container {
   position: relative;
   max-width: 100%;
-  height: 64;
-  padding: 5px;
-  padding-left: 0px !important;
-  line-height: 16px; 
-  font-family: monospace;
+  padding: 0 !important;
   display: -webkit-flex;
   display: -moz-flex;
   display: flex;
   vertical-align: text-bottom !important;
 }
 
-.ts-event-field-line-clamp {
-  overflow: hidden;
-  word-break: break-all !important;
-  display: -webkit-box;
-  /* number of lines to show */
-  -webkit-line-clamp: 3;
-  line-clamp: 3; 
-  -webkit-box-orient: vertical;
+.ts-event-field-ellipsis {
+  position: absolute;
+  white-space: nowrap;
+  overflow-y: visible;
+  overflow-x: hidden;
+  text-overflow: ellipsis;
+  -ms-text-overflow: ellipsis;
+  -o-text-overflow: ellipsis;
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  left: 0;
 }
 
 .ts-event-field-highlight {
@@ -1001,7 +1256,6 @@ export default {
 
 .datetime-table-cell {
   height: 100%;
-  font-weight: 401;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -1021,5 +1275,135 @@ th:last-child {
 .v-data-table td:first-child,
 th:first-child {
   padding: 0 0 0 10px !important;
+}
+
+.ts-ai-summary-card {
+  border: 1px solid transparent !important;
+  border-radius: 8px;
+  background-color: #fafafa;
+  background-image:
+      linear-gradient(white, white),
+      linear-gradient(90deg,
+          #8ab4f8 0%,
+          #81c995 20%,
+          #f8c665 40%,
+          #ec7764 60%,
+          #b39ddb 80%,
+          #8ab4f8 100%
+      );
+  background-origin: border-box;
+  background-clip: content-box, border-box;
+  background-size: 300% 100%;
+  animation: borderBeamIridescent-subtle 6s linear infinite;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+  display: block;
+  margin-bottom: 20px;
+}
+
+.v-data-table {
+  display: block; /* Ensure block display for data table */
+}
+
+@keyframes borderBeamIridescent-subtle {
+    0% {
+        background-position: 0% 50%;
+    }
+    100% {
+        background-position: 100% 50%;
+    }
+}
+
+.theme--dark.ts-ai-summary-card {
+  background-color: #1e1e1e;
+  border-color: hsla(0,0%,100%,.12) !important;
+  background-image:
+      linear-gradient(#1e1e1e, #1e1e1e),
+      linear-gradient(90deg,
+          #8ab4f8 0%,
+          #81c995 20%,
+          #f8c665 40%,
+          #ec7764 60%,
+          #b39ddb 80%,
+          #8ab4f8 100%
+      );
+      box-shadow: 0 2px 5px rgba(255, 255, 255, 0.08);
+  display: block;
+  margin-bottom: 20px;
+}
+
+.ts-ai-summary-text {
+  white-space: pre-line;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  margin-top: -10px;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.ts-ai-summary-card .v-btn--icon {
+  cursor: pointer;
+}
+
+.ts-ai-summary-card .v-btn--icon:hover {
+  opacity: 0.8;
+}
+
+.ts-summary-placeholder-line {
+  height: 1em;
+  background-color: #e0e0e0;
+  margin-bottom: 0.5em;
+  border-radius: 4px;
+  width: 100%;
+}
+
+.ts-summary-placeholder-line.short {
+  width: 60%;
+}
+
+.ts-summary-placeholder-line.long {
+  width: 80%;
+}
+
+.shimmer {
+  background: linear-gradient(to right, #e0e0e0 8%, #f0f0f0 18%, #e0e0e0 33%);
+  background-size: 800px 100%;
+  animation: shimmer-animation 1.5s infinite linear forwards;
+}
+
+@keyframes shimmer-animation {
+  0% {
+    background-position: -468px 0;
+  }
+  100% {
+    background-position: 468px 0;
+  }
+}
+
+.ts-event-list-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 20px;
+}
+
+::v-deep .no-transition {
+  transition: none !important;
+}
+
+.ts-ai-summary-card-title {
+  display: flex;
+  align-items: baseline;
+}
+
+.ts-ai-summary-title {
+  margin-right: 8px;
+  font-weight: normal;
+}
+
+.ts-ai-summary-subtitle {
+  font-size: 0.7em;
+  color: grey;
+  vertical-align: middle;
+  display: inline-block;
 }
 </style>

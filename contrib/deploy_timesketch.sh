@@ -81,7 +81,7 @@ OPENSEARCH_PORT=9200
 OPENSEARCH_MEM_USE_GB=$(cat /proc/meminfo | grep MemTotal | awk '{printf "%.0f", ($2 / (1024 * 1024) / 2)}')
 REDIS_ADDRESS="redis"
 REDIS_PORT=6379
-GITHUB_BASE_URL="https://raw.githubusercontent.com/hnhdev/timesketch/main"
+GITHUB_BASE_URL="https://raw.githubusercontent.com/google/timesketch/master"
 echo "OK"
 echo "* Setting OpenSearch memory allocation to ${OPENSEARCH_MEM_USE_GB}GB"
 
@@ -132,7 +132,7 @@ echo "OK"
 echo "* Installation done."
 
 if [ -z $START_CONTAINER ]; then
-  read -p "Would you like to start the containers? [Y/n] (default:no)" START_CONTAINER
+  read -p "Would you like to start the containers? [y/N]" START_CONTAINER
 fi
 
 if [ "$START_CONTAINER" != "${START_CONTAINER#[Yy]}" ] ;then # this grammar (the #[] operator) means that the variable $start_cnt where any Y or y in 1st position will be dropped if they exist.
@@ -150,7 +150,7 @@ else
   echo
   echo "WARNING: The server is running without encryption."
   echo "Follow the instructions to enable SSL to secure the communications:"
-  echo "https://github.com/google/timesketch/blob/main/docs/Installation.md"
+  echo "https://github.com/google/timesketch/blob/master/docs/Installation.md"
   echo
   echo
   exit

@@ -1,13 +1,14 @@
 """Tests for BigQueryMatcher Plugin."""
 
-import copy
 import sys
+import copy
+from unittest import mock
 
-import mock
+from timesketch.lib.testlib import MockDataStore
 
-from timesketch.lib.analyzers.contrib import bigquery_matcher
 from timesketch.lib.emojis import EMOJI_MAP
-from timesketch.lib.testlib import BaseTest, MockDataStore
+from timesketch.lib.analyzers.contrib import bigquery_matcher
+from timesketch.lib.testlib import BaseTest
 
 
 class TestBigQueryMatcherPlugin(BaseTest):
@@ -16,7 +17,7 @@ class TestBigQueryMatcherPlugin(BaseTest):
     _TEST_EMOJI = "SKULL"
     _TEST_TAG = "test-tag"
     # Skip the tests if bigquery is not imported.
-
+    # pylint: disable=simplifiable-if-expression
     __test__ = True if "google.cloud.bigquery" in sys.modules else False
 
     def __init__(self, *args, **kwargs):
@@ -82,7 +83,7 @@ class TestBigQueryMatcherPlugin(BaseTest):
         datastore = analyzer.datastore
         mock_bq().query.return_value = []
         # Need to access protected members for testing purposes.
-
+        # pylint: disable=protected-access
         for i in range(analyzer._BQ_BATCH_SIZE + 1):
             _add_event_to_datastore(datastore, i, {"field_name": str(i)})
 

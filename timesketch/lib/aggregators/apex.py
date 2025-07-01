@@ -17,7 +17,8 @@ import collections
 
 import pandas as pd
 
-from timesketch.lib.aggregators import interface, manager
+from timesketch.lib.aggregators import interface
+from timesketch.lib.aggregators import manager
 
 
 class AggregationQuerySpec:
@@ -420,7 +421,9 @@ class ApexAggregation(interface.BaseAggregator):
         )
         return aggregation_query.spec
 
-    def run(self, *, fields, aggregator_options, chart_type, chart_options):
+    def run(
+        self, *, fields, aggregator_options, chart_type, chart_options
+    ):  # pylint: disable=arguments-differ
         """Runs the aggregator.
 
         Returns:

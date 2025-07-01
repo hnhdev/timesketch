@@ -19,7 +19,10 @@ import re
 
 import pandas
 
-from . import error, resource, searchtemplate
+from . import error
+from . import resource
+from . import searchtemplate
+
 
 logger = logging.getLogger("timesketch_api.search")
 
@@ -257,7 +260,7 @@ class DateRangeChip(Chip):
 
         try:
             dt = datetime.datetime.strptime(end_time, self._DATE_FORMAT_MICROSECONDS)
-        except ValueError as exc:
+        except ValueError:
             try:
                 dt = datetime.datetime.strptime(end_time, self._DATE_FORMAT)
             except ValueError as exc:
@@ -285,7 +288,7 @@ class DateRangeChip(Chip):
 
         try:
             dt = datetime.datetime.strptime(start_time, self._DATE_FORMAT_MICROSECONDS)
-        except ValueError as exc:
+        except ValueError:
             try:
                 dt = datetime.datetime.strptime(start_time, self._DATE_FORMAT)
             except ValueError as exc:
@@ -655,7 +658,7 @@ class Search(resource.SketchResource):
         _ = self._execute_query(count=True)
         return self._total_elastic_size
 
-    def from_manual(
+    def from_manual(  # pylint: disable=arguments-differ
         self,
         query_string=None,
         query_dsl=None,
@@ -713,11 +716,11 @@ class Search(resource.SketchResource):
 
         self.resource_data = {}
 
-    def from_saved(self, search_id):
+    def from_saved(self, search_id):  # pylint: disable=arguments-renamed
         """Initialize the search object from a saved search.
 
         Args:
-            search_id: integer value for the saved
+            search_id (int): integer value for the saved
                 search (primary key).
         """
         resource_uri = f"sketches/{self._sketch.id}/views/{search_id}/"
@@ -1078,7 +1081,7 @@ class Search(resource.SketchResource):
         self._scrolling = True
 
     def to_dict(self):
-        """Returns a dict with the respone of the query."""
+        """Returns a dict with the response of the query."""
         if self._raw_response is None:
             self._execute_query()
             if self._raw_response is None:
@@ -1124,23 +1127,32 @@ class Search(resource.SketchResource):
 
         for result in self._raw_response.get("objects", []):
             source = result.get("_source", {})
-
-            # Remove internal Timesketch fields
-            for key in list(source.keys()):
-                if key.startswith("__"):
-                    source.pop(key)
+            if not return_fields or "_id" in return_field_list:
+                source["_id"] = result.get("_id")
+            if not return_fields or "_type" in return_field_list:
+                source["_type"] = result.get("_type")
+            if not return_fields or "_index" in return_field_list:
+                source["_index"] = result.get("_index")
+            if not return_fields or "_source" in return_field_list:
+                source["_source"] = timelines.get(result.get("__ts_timeline_id"))
+            if not return_fields or "__ts_timeline_id" in return_field_list:
+                source["_source"] = timelines.get(result.get("__ts_timeline_id"))
 
             return_list.append(source)
 
         data_frame = pandas.DataFrame(return_list)
-        try:
-            data_frame["datetime"] = pandas.to_datetime(
-                data_frame.datetime, utc=True, format="ISO8601", errors="coerce"
-            )
-        except pandas.errors.OutOfBoundsDatetime:
-            pass
-        except AttributeError:
-            pass
+        if "datetime" in data_frame:
+            try:
+                data_frame["datetime"] = pandas.to_datetime(data_frame.datetime)
+            except pandas.errors.OutOfBoundsDatetime:
+                pass
+        elif "timestamp" in data_frame:
+            try:
+                data_frame["datetime"] = pandas.to_datetime(
+                    data_frame.timestamp / 1e6, utc=True, unit="s"
+                )
+            except pandas.errors.OutOfBoundsDatetime:
+                pass
 
         return data_frame
 

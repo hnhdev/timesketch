@@ -333,6 +333,7 @@ export default {
       countPerTimeline: {},
       currentItemsPerPage: 40,
       timeFilterMenu: false,
+      selectedFields: [{ field: 'message', type: 'text' }],
       showRightSidePanel: false,
       addManualEvent: false,
       datetimeManualEvent: '',
@@ -476,6 +477,10 @@ export default {
           let view = response.data.objects[0]
           this.currentQueryString = view.query_string
           this.currentQueryFilter = JSON.parse(view.query_filter)
+          if (!this.currentQueryFilter.fields || !this.currentQueryFilter.fields.length) {
+            this.currentQueryFilter.fields = [{ field: 'message', type: 'text' }]
+          }
+          this.selectedFields = this.currentQueryFilter.fields
           let chips = this.currentQueryFilter.chips
           if (chips) {
             for (let i = 0; i < chips.length; i++) {
@@ -524,7 +529,12 @@ export default {
 
       this.currentQueryFilter.chips = [startChip, endChip]
 
-      this.currentQueryFilter.indices = [this.contextEvent._source.__ts_timeline_id]
+      let isLegacy = this.meta.indices_metadata[this.contextEvent._index].is_legacy
+      if (isLegacy) {
+        this.currentQueryFilter.indices = [this.contextEvent._index]
+      } else {
+        this.currentQueryFilter.indices = [this.contextEvent._source.__ts_timeline_id]
+      }
       this.currentQueryFilter.size = numContextEvents
       this.search()
     },
@@ -650,10 +660,19 @@ export default {
     jumpInHistory: function (node) {
       this.currentQueryString = node.query_string
       this.currentQueryFilter = JSON.parse(node.query_filter)
+      if (!this.currentQueryFilter.fields || !this.currentQueryFilter.fields.length) {
+        this.currentQueryFilter.fields = [{ field: 'message', type: 'text' }]
+      }
+      this.selectedFields = this.currentQueryFilter.fields
       if (this.currentQueryFilter.indices[0] === '_all' || this.currentQueryFilter.indices === '_all') {
         let allIndices = []
         this.sketch.active_timelines.forEach((timeline) => {
-          allIndices.push(timeline.id)
+          let isLegacy = this.meta.indices_metadata[timeline.searchindex.index_name].is_legacy
+          if (isLegacy) {
+            allIndices.push(timeline.searchindex.index_name)
+          } else {
+            allIndices.push(timeline.id)
+          }
         })
         this.currentQueryFilter.indices = allIndices
       }
@@ -740,7 +759,12 @@ export default {
         return timeline.id === parseInt(this.params.indexName, 10)
       })
 
-      this.currentQueryFilter.indices = [timeline.id]
+      let isLegacy = this.meta.indices_metadata[timeline.searchindex.index_name].is_legacy
+      if (isLegacy) {
+        this.currentQueryFilter.indices = [timeline.searchindex.index_name]
+      } else {
+        this.currentQueryFilter.indices = [timeline.id]
+      }
       doSearch = true
     }
 

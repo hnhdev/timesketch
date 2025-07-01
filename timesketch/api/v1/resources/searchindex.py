@@ -15,21 +15,23 @@
 import logging
 
 import opensearchpy
-from flask import abort, request
-from flask_login import current_user, login_required
+from flask import request
+from flask import abort
 from flask_restful import Resource
+from flask_login import login_required
+from flask_login import current_user
 
 from timesketch.api.v1 import resources
 from timesketch.lib import forms
-from timesketch.lib.definitions import (
-    HTTP_STATUS_CODE_BAD_REQUEST,
-    HTTP_STATUS_CODE_CREATED,
-    HTTP_STATUS_CODE_FORBIDDEN,
-    HTTP_STATUS_CODE_NOT_FOUND,
-    HTTP_STATUS_CODE_OK,
-)
+from timesketch.lib.definitions import HTTP_STATUS_CODE_OK
+from timesketch.lib.definitions import HTTP_STATUS_CODE_CREATED
+from timesketch.lib.definitions import HTTP_STATUS_CODE_BAD_REQUEST
+from timesketch.lib.definitions import HTTP_STATUS_CODE_FORBIDDEN
+from timesketch.lib.definitions import HTTP_STATUS_CODE_NOT_FOUND
 from timesketch.models import db_session
-from timesketch.models.sketch import SearchIndex, Timeline
+from timesketch.models.sketch import SearchIndex
+from timesketch.models.sketch import Timeline
+
 
 logger = logging.getLogger("timesketch.index_api")
 
@@ -110,26 +112,17 @@ class SearchIndexResource(resources.ResourceMixin, Resource):
         try:
             mapping = self.datastore.client.indices.get_mapping(searchindex.index_name)
         except opensearchpy.NotFoundError:
-            logger.error("Unable to find index: {0:s}".format(searchindex.index_name))
+            logger.error("Unable to find index: %s", searchindex.index_name)
             mapping = {}
             searchindex.set_status("fail")
             db_session.commit()
 
-        # In case the index is an alias, the mapping of the first index is returned
-        if self.datastore.client.indices.exists_alias(searchindex.index_name):
-            fields = list(
-                mapping.get(next(iter(mapping)), {})
-                .get("mappings", {})
-                .get("properties", {})
-                .keys()
-            )
-        else:
-            fields = list(
-                mapping.get(searchindex.index_name, {})
-                .get("mappings", {})
-                .get("properties", {})
-                .keys()
-            )
+        fields = list(
+            mapping.get(searchindex.index_name, {})
+            .get("mappings", {})
+            .get("properties", {})
+            .keys()
+        )
 
         meta = {
             "contains_timeline_id": bool("__ts_timeline_id" in fields),
@@ -217,7 +210,7 @@ class SearchIndexResource(resources.ResourceMixin, Resource):
         if sketches:
             error_strings = ["WARNING: This timeline is in use by:"]
             for sketch in sketches:
-                error_strings.append(" * {0:s}".format(sketch.name))
+                error_strings.append(f" * {sketch.id:d}")
             abort(HTTP_STATUS_CODE_FORBIDDEN, "\n".join(error_strings))
 
         searchindex.set_status(status="deleted")
@@ -229,7 +222,7 @@ class SearchIndexResource(resources.ResourceMixin, Resource):
         ).all()
         if len(other_indexes) > 1:
             logger.warning(
-                "Search index: {0:s} belongs to more than one "
+                "Search index: {:s} belongs to more than one "
                 "db entry.".format(searchindex.index_name)
             )
             return HTTP_STATUS_CODE_OK
@@ -238,7 +231,7 @@ class SearchIndexResource(resources.ResourceMixin, Resource):
             self.datastore.client.indices.close(index=searchindex.index_name)
         except opensearchpy.NotFoundError:
             logger.warning(
-                "Unable to close index: {0:s}, the index wasn't "
+                "Unable to close index: {:s}, the index wasn't "
                 "found.".format(searchindex.index_name)
             )
 

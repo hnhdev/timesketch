@@ -12,18 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Date Histogram aggregations."""
-from __future__ import unicode_literals
 
 import copy
 from datetime import datetime
 
-from timesketch.lib.aggregators import interface, manager
+from timesketch.lib.aggregators import interface
+from timesketch.lib.aggregators import manager
 
 
 class DateHistogramAggregation(interface.BaseAggregator):
     """Date Histogram Aggregation.
 
-    This aggregator uses "calendar_interval" which is a type of OpenSearch
+    This aggregator uses "date_histogram" which is a type of OpenSearch
     aggregation that buckets documents (i.e. events in Timesketch) into
     time-based intervals.
     """
@@ -34,9 +34,7 @@ class DateHistogramAggregation(interface.BaseAggregator):
 
     SUPPORTED_CHARTS = frozenset(["heatmap", "date_histogram", "table"])
 
-    SUPPORTED_INTERVALS = frozenset(
-        ["year", "quarter", "month", "week", "day", "hour", "minute"]
-    )
+    SUPPORTED_INTERVALS = frozenset(["year", "month", "day", "day_of_week", "hour"])
 
     FORM_FIELDS = [
         {
@@ -109,7 +107,7 @@ class DateHistogramAggregation(interface.BaseAggregator):
             "aggregation": {
                 "date_histogram": {
                     "field": "datetime",
-                    "calendar_interval": None,
+                    # "interval": "TODO"
                 }
             }
         },
@@ -185,7 +183,7 @@ class DateHistogramAggregation(interface.BaseAggregator):
             {"query_string": {"query": query}}
         )
         aggregation_spec["aggs"]["aggregation"]["date_histogram"][
-            "calendar_interval"
+            "interval"
         ] = self.interval
         aggregation_spec["aggs"]["aggregation"]["date_histogram"]["missing"] = 0
         aggregation_spec["aggs"]["aggregation"]["date_histogram"]["min_doc_count"] = 0
@@ -212,20 +210,22 @@ class DateHistogramAggregation(interface.BaseAggregator):
 
         return aggregation_spec
 
+    # pylint: disable=arguments-differ
     def run(
         self,
-        field,
-        field_query_string="*",
-        supported_intervals="day",
-        supported_charts="heatmap",
-        start_time="",
-        end_time="",
+        field: str,
+        field_query_string: str = "*",
+        supported_intervals: str = "day",
+        supported_charts: str = "heatmap",
+        start_time: str = "",
+        end_time: str = "",
     ):
         """Runs the date_histogram aggregator.
 
         Args:
             field: What field to aggregate on.
             field_query_string: The field value(s) to aggregate on.
+            supported_intervals: The time interval to aggregate on.
             supported_charts: The chart type to render.  Defaults to table.
             start_time: Optional ISO formatted date string that limits the time range
                 for the aggregation.
@@ -239,9 +239,10 @@ class DateHistogramAggregation(interface.BaseAggregator):
             raise ValueError("Missing field and/or field_query_string.")
 
         self.field = field
-
+        # pylint: disable=attribute-defined-outside-init
         self.field_query_string = field_query_string
         self.interval = supported_intervals
+        # pylint: enable=attribute-defined-outside-init
 
         encoding = self._get_vega_encoding(supported_charts)
 
@@ -265,10 +266,10 @@ class DateHistogramAggregation(interface.BaseAggregator):
                 "year": dt.year,
             }
 
-            if self.interval in ("month", "day", "hour"):
+            if self.interval in ("month", "day", "day_of_week", "hour"):
                 value["month"] = dt.month
 
-                if self.interval in ("day", "hour"):
+                if self.interval in ("day", "day_of_week", "hour"):
                     value["day"] = dt.day
                     value["dow"] = dt.weekday()
 

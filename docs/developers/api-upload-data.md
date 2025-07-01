@@ -245,9 +245,12 @@ work with Timesketch. This function does limited checking before making it
 available. The timeline may or may not work in Timesketch, depending on
 multiple factors._
 
-- datetime
+The data that is ingested needs to have few fields already set before it can be
+ingested into Timesketch:
+
+- message
 - timestamp_desc
-- data_type
+- datetime
 
 The datetime field also needs to be mapped as a date, not a text string.
 
@@ -259,13 +262,10 @@ from timesketch_api_client import config
 ts_client = config.get_client()
 sketch = ts_client.get_sketch(SKETCH_ID)
 
-timeline = sketch.generate_timeline_from_es_index(
-    es_index_name=OPENSEARCH_INDEX_NAME,
+sketch.generate_timeline_from_es_index(
+    index_name=OPENSEARCH_INDEX_NAME,
     name=TIMELINE_NAME,
     provider='My Custom Ingestion Script',
     context='python my_custom_script.py --ingest',
 )
-
-# Use `timeline.id` as the value of the integer field `__ts_timeline_id`,
-# e.g. Logstash filter: `{mutate {add_field => { "__ts_timeline_id" => "${TIMELINE_ID}"}}} ``
 ```

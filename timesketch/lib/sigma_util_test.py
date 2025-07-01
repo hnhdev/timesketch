@@ -13,14 +13,14 @@
 # limitations under the License.
 """Tests for sigma_util score."""
 
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 import datetime
 
 from sigma.parser import exceptions as sigma_exceptions
 
-from timesketch.lib import sigma_util
 from timesketch.lib.testlib import BaseTest
+from timesketch.lib import sigma_util
+
 
 SIGMA_MOCK_RULE_TEST4 = r"""
 title: Login with WMI
@@ -96,6 +96,7 @@ class TestSigmaUtilLib(BaseTest):
     def test_sanitize_rule_string(self):
         """Testing the string sanitization"""
 
+        # pylint: disable=protected-access
         test_1 = sigma_util._sanitize_query("(* lorem * OR * lorema *)")
         self.assertIsNotNone(test_1)
 
@@ -111,7 +112,7 @@ class TestSigmaUtilLib(BaseTest):
 
     def test_sanitize_rule_string_multiple_or(self):
         """test that the function does not break regular queries"""
-
+        # pylint: disable=protected-access
         self.assertEqual(
             sigma_util._sanitize_query("*mimikatz* OR *mimikatz.exe* OR *mimilib.dll*"),
             "*mimikatz* OR *mimikatz.exe* OR *mimilib.dll*",
@@ -119,13 +120,13 @@ class TestSigmaUtilLib(BaseTest):
 
     def test_sanitize_rule_string_multiple_colon(self):
         """Test sanitization of query with multiple colons and asterisks"""
-
+        # pylint: disable=protected-access
         test_2 = sigma_util._sanitize_query("(*a:b* OR *c::d*)")
         self.assertEqual(test_2, r'("a:b" OR "c\:\:d")')
 
     def test_sanitize_rule_string_with_dotkeyword(self):
         """Test sanitization of query with .keyword in them"""
-
+        # pylint: disable=protected-access
         test_3 = sigma_util._sanitize_query(
             '(xml_string.keyword:"\\foobar.exe" AND GrantedAccess.keyword:"10")'
         )
@@ -133,11 +134,12 @@ class TestSigmaUtilLib(BaseTest):
 
     def test_sanitize_rule_string_with_double_quotes(self):
         """Test sanitization of query with double quotes in the query"""
-
+        # pylint: disable=protected-access
         test_4 = sigma_util._sanitize_query(
-            '(xml_string:C:\\Program Files\\WindowsApps\\" AND xml_string: "GamingServices.exe)'
+            '(xml_string:C:\\Program Files\\WindowsApps\\" AND xml_string: "GamingServices.exe)'  # pylint: disable=line-too-long
         )
         self.assertIsNotNone(test_4)
+        # pylint: enable=protected-access
 
     def test_get_rule_by_text(self):
         """Test getting sigma rule by text."""
@@ -147,7 +149,7 @@ class TestSigmaUtilLib(BaseTest):
         self.assertIsNotNone(SIGMA_MOCK_RULE_TEST4)
         self.assertIsNotNone(rule)
         self.assertEqual(
-            '(data_type:"windows:evtx:record" AND source_name:("Microsoft-Windows-Security-Auditing" OR "Microsoft-Windows-Eventlog") AND event_identifier:"4624" AND xml_string:"\\\\WmiPrvSE.exe")',
+            '(data_type:"windows:evtx:record" AND source_name:("Microsoft-Windows-Security-Auditing" OR "Microsoft-Windows-Eventlog") AND event_identifier:"4624" AND xml_string:"\\\\WmiPrvSE.exe")',  # pylint: disable=line-too-long
             rule.get("search_query"),
         )
 
@@ -181,7 +183,7 @@ level: high
         self.assertIsNotNone(rule)
         self.assertIn("zmap", rule.get("search_query"))
         self.assertEqual(
-            '(data_type:("shell:zsh:history" OR "bash:history:command" OR "apt:history:line" OR "selinux:line") AND "apt-get install zmap")',
+            '(data_type:("shell:zsh:history" OR "bash:history:command" OR "apt:history:line" OR "selinux:line") AND "apt-get install zmap")',  # pylint: disable=line-too-long
             rule.get("search_query"),
         )
         self.assertIn("b793", rule.get("id"))
@@ -227,7 +229,7 @@ level: high
 
         self.assertIsNotNone(rule)
         self.assertEqual(
-            '(data_type:"windows:evtx:record" AND event_identifier:("1" OR "4688") AND source_name:("Microsoft-Windows-Sysmon" OR "Microsoft-Windows-Security-Auditing" OR "Microsoft-Windows-Eventlog") AND ((message:"\\\\foo.exe" OR xml_string:"origfile.exe") AND (xml_string:*bar* AND xml_string:*.dll* AND xml_string:"Baz")) AND (NOT (xml_string:(" \\/foo bar.dll " OR " baz.dll "))))',
+            '(data_type:"windows:evtx:record" AND event_identifier:("1" OR "4688") AND source_name:("Microsoft-Windows-Sysmon" OR "Microsoft-Windows-Security-Auditing" OR "Microsoft-Windows-Eventlog") AND ((message:"\\\\foo.exe" OR xml_string:"origfile.exe") AND (xml_string:*bar* AND xml_string:*.dll* AND xml_string:"Baz")) AND (NOT (xml_string:(" \\/foo bar.dll " OR " baz.dll "))))',  # pylint: disable=line-too-long
             rule.get("search_query"),
         )
 
@@ -379,7 +381,7 @@ status: experimental
 author: Alexander Jaeger
 date: 2022/04/26
 references:
-    - https://github.com/SigmaHQ/sigma/blob/e4c8e62ba6a32f8966ab4216a15dd393af4ef3a3/rules/windows/process_access/proc_access_win_rare_proc_access_lsass.yml 
+    - https://github.com/SigmaHQ/sigma/blob/e4c8e62ba6a32f8966ab4216a15dd393af4ef3a3/rules/windows/process_access/proc_access_win_rare_proc_access_lsass.yml # pylint: disable=line-too-long
 logsource:
     category: process_access
     product: windows
@@ -554,7 +556,7 @@ detection:
 title: Vim GTFOBin Abuse - Linux
 id: 7ab8f73a-fcff-428b-84aa-6a5ff7877dea
 status: test
-description: Detects usage of "vim" and it's siblings as a GTFOBin to execute and proxy command and binary execution 
+description: Detects usage of "vim" and it's siblings as a GTFOBin to execute and proxy command and binary execution # pylint: disable=line-too-long
 references:
     - https://gtfobins.github.io/gtfobins/vim/
     - https://gtfobins.github.io/gtfobins/rvim/

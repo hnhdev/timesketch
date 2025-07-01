@@ -15,8 +15,8 @@
 
 import collections
 import inspect
-import json
 import os
+import json
 import time
 import traceback
 import unittest
@@ -25,6 +25,7 @@ import uuid
 import opensearchpy
 import opensearchpy.helpers
 import pandas as pd
+
 from timesketch_api_client import client as api_client
 from timesketch_import_client import importer
 
@@ -253,7 +254,7 @@ class BaseEndToEndTest(object):
             print("Running test: {0:s} ...".format(test_name), end="", flush=True)
             try:
                 test_func()
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 # TODO: Change to logging module instead of prints
                 print(traceback.format_exc())
                 self._counter["errors"] += 1

@@ -13,19 +13,20 @@
 # limitations under the License.
 """This package handles setting up and providing the database connection."""
 
-from __future__ import unicode_literals
 
 from flask import abort
 from flask_login import current_user
 from flask_sqlalchemy.query import Query
-from sqlalchemy import Column, DateTime, Integer, create_engine, func
+from sqlalchemy import create_engine
+from sqlalchemy.orm import scoped_session, sessionmaker, as_declarative
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import as_declarative, scoped_session, sessionmaker
+from sqlalchemy import Column
+from sqlalchemy import DateTime
+from sqlalchemy import func
+from sqlalchemy import Integer
 
-from timesketch.lib.definitions import (
-    HTTP_STATUS_CODE_FORBIDDEN,
-    HTTP_STATUS_CODE_NOT_FOUND,
-)
+from timesketch.lib.definitions import HTTP_STATUS_CODE_NOT_FOUND
+from timesketch.lib.definitions import HTTP_STATUS_CODE_FORBIDDEN
 
 # The database session
 engine = None
@@ -36,7 +37,7 @@ db_session = scoped_session(session_maker)
 def configure_engine(url):
     """Configure and setup the database session."""
     # These needs to be global because of the way Flask works.
-
+    # pylint: disable=global-statement,global-variable-not-assigned
     # TODO: Can we wrap this in a class?
     global engine, session_maker, db_session
     engine = create_engine(url, future=True)
@@ -62,7 +63,7 @@ def drop_all():
 
 
 @as_declarative()
-class BaseModel(object):
+class BaseModel:
     """Base class used for database models. It adds common model fields to all
     models classes that subclass it.
     """

@@ -21,12 +21,12 @@ also be used by those manually generating charts in notebooks.
 This aggregator is not useful for UI and therefore is "hidden" from
 views.
 """
-from __future__ import unicode_literals
 
 import altair as alt
 import pandas as pd
 
-from timesketch.lib.aggregators import interface, manager
+from timesketch.lib.aggregators import manager
+from timesketch.lib.aggregators import interface
 
 
 class VegaResult:
@@ -46,6 +46,7 @@ class VegaResult:
         self.chart_type = "manual_vega"
         self._spec = spec
 
+    # pylint: disable=unused-argument
     def to_dict(self, encoding=False):
         """Encode aggregation result as dict.
 
@@ -71,14 +72,15 @@ class VegaResult:
         """
         return pd.DataFrame()
 
+    # pylint: disable=unused-argument
     def to_chart(
         self,
-        chart_name="",
-        chart_title="",
-        as_html=False,
-        interactive=False,
-        as_chart=False,
-        color="",
+        chart_name: str = "",
+        chart_title: str = "",
+        as_html: bool = False,
+        interactive: bool = False,
+        as_chart: bool = False,
+        color: str = "",
     ):
         """Encode aggregation result as Vega-Lite chart.
 
@@ -150,6 +152,7 @@ class ManualVegaSpecAggregation(interface.BaseAggregator):
             return self.title
         return "Results From A Manual Vega Spec"
 
+    # pylint: disable=arguments-differ
     def run(self, data, title="", **kwargs):
         """Run the aggregation.
 

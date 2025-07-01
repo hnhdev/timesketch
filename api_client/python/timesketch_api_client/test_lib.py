@@ -23,6 +23,7 @@ def mock_session():
     class MockHeaders:
         """Mock requests HTTP headers."""
 
+        # pylint: disable=unused-argument
         @staticmethod
         def update(*args, **kwargs):
             """Mock header update method."""
@@ -37,11 +38,13 @@ def mock_session():
             self.headers = MockHeaders()
             self._post_done = False
 
+        # pylint: disable=unused-argument
         @staticmethod
         def get(*args, **kwargs):
             """Mock GET request handler."""
             return mock_response(*args, **kwargs)
 
+        # pylint: disable=unused-argument
         def post(self, *args, **kwargs):
             """Mock POST request handler."""
             kwargs["method"] = "POST"
@@ -52,6 +55,7 @@ def mock_session():
     return MockSession()
 
 
+# pylint: disable=unused-argument
 def mock_response(*args, **kwargs):
     """Mocks HTTP response."""
 
@@ -212,13 +216,9 @@ def mock_response(*args, **kwargs):
         },
         "objects": [
             {
-                "_id": 1234,
-                "_index": "test",
-                "_source": {
-                    "datetime": "2012-03-14T08:12:03.998281",
-                    "id": 1,
-                    "name": "test",
-                },
+                "id": 1,
+                "name": "test",
+                "searchindex": {"id": 1234, "index_name": "test"},
             }
         ],
     }
@@ -229,13 +229,9 @@ def mock_response(*args, **kwargs):
         },
         "objects": [
             {
-                "_id": 42,
-                "_index": "even_more_test",
-                "_source": {
-                    "datetime": "2012-03-14T08:12:03.998281",
-                    "id": 2,
-                    "name": "more_test",
-                },
+                "id": 2,
+                "name": "more_test",
+                "searchindex": {"id": 42, "index_name": "even_more_test"},
             }
         ],
     }
@@ -371,7 +367,7 @@ def mock_response(*args, **kwargs):
                 },
                 "falsepositives": ["Unknown"],
                 "level": "high",
-                "search_query": '(data_type:("shell\\:zsh\\:history" OR "bash\\:history\\:command" OR "apt\\:history\\:line" OR "selinux\\:line") AND "*apt\\-get\\ install\\ foobar*")',
+                "search_query": '(data_type:("shell\\:zsh\\:history" OR "bash\\:history\\:command" OR "apt\\:history\\:line" OR "selinux\\:line") AND "*apt\\-get\\ install\\ foobar*")',  # pylint: disable=line-too-long
                 "file_name": "N/A",
                 "file_relpath": "N/A",
             }
@@ -458,7 +454,7 @@ def mock_response(*args, **kwargs):
                 },
                 "falsepositives": ["Unknown"],
                 "level": "high",
-                "search_query": '(data_type:("shell\\:zsh\\:history" OR "bash\\:history\\:command" OR "apt\\:history\\:line" OR "selinux\\:line") AND "*apt\\-get\\ install\\ foobar*")',
+                "search_query": '(data_type:("shell\\:zsh\\:history" OR "bash\\:history\\:command" OR "apt\\:history\\:line" OR "selinux\\:line") AND "*apt\\-get\\ install\\ foobar*")',  # pylint: disable=line-too-long
             }
         ],
     }
@@ -775,8 +771,8 @@ def mock_response(*args, **kwargs):
     url_router = {
         "http://127.0.0.1": MockResponse(text_data=auth_text_data),
         "http://127.0.0.1/api/v1/sketches/": MockResponse(json_data=sketch_list_data),
-        "http://127.0.0.1/api/v1/sketches/1/": MockResponse(json_data=sketch_data),
-        "http://127.0.0.1/api/v1/sketches/1/event/?searchindex_id=test_index&event_id=test_event": MockResponse(
+        "http://127.0.0.1/api/v1/sketches/1": MockResponse(json_data=sketch_data),
+        "http://127.0.0.1/api/v1/sketches/1/event/?searchindex_id=test_index&event_id=test_event": MockResponse(  # pylint: disable=line-too-long
             json_data=event_data_1
         ),
         "http://127.0.0.1/api/v1/sketches/1/event/attributes/": MockResponse(
@@ -812,14 +808,14 @@ def mock_response(*args, **kwargs):
         "http://127.0.0.1/api/v1/sketches/1/archive/": MockResponse(
             json_data=archive_data
         ),
-        "http://127.0.0.1/api/v1/sigma/rule/5266a592-b793-11ea-b3de-0242ac130004": MockResponse(
+        "http://127.0.0.1/api/v1/sigma/rule/5266a592-b793-11ea-b3de-0242ac130004": MockResponse(  # pylint: disable=line-too-long
             json_data=sigma_rule
         ),
         "http://127.0.0.1/api/v1/sigma/": MockResponse(json_data=sigma_list),
         "http://127.0.0.1/api/v1/sigma/text/": MockResponse(
             json_data=sigma_rule_text_mock
         ),
-        "http://127.0.0.1/api/v1/sigmarules/5266a592-b793-11ea-b3de-0242ac130004": MockResponse(
+        "http://127.0.0.1/api/v1/sigmarules/5266a592-b793-11ea-b3de-0242ac130004": MockResponse(  # pylint: disable=line-too-long
             json_data=sigmarule_individual
         ),
         "http://127.0.0.1/api/v1/sigmarules/": MockResponse(json_data=sigmarule_list),
@@ -878,7 +874,6 @@ def mock_response(*args, **kwargs):
         "http://127.0.0.1/api/v1/sketches/1/explore/": MockResponse(
             json_data=timeline_data
         ),
-        "http://127.0.0.1/api/v1/sketches/": MockResponse(json_data=sketch_list_data),
     }
 
     if kwargs.get("empty", False):

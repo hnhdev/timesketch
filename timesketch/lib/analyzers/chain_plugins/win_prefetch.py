@@ -1,7 +1,7 @@
-# -*- coding: utf-8 -*-
 """This file contains the plugin for executables in Windows prefetch files."""
 
-from timesketch.lib.analyzers.chain_plugins import interface, manager
+from timesketch.lib.analyzers.chain_plugins import interface
+from timesketch.lib.analyzers.chain_plugins import manager
 
 
 class WinPrefetchChainPlugin(interface.BaseChainPlugin):
@@ -29,7 +29,7 @@ class WinPrefetchChainPlugin(interface.BaseChainPlugin):
         target = base_event.source.get("executable", "")
         return target.lower().endswith(".exe")
 
-    def get_chained_events(self, base_event):
+    def get_chained_events(self, base_event: object):
         """Yields an event that is chained or linked to the base event.
 
         Args:
@@ -43,9 +43,9 @@ class WinPrefetchChainPlugin(interface.BaseChainPlugin):
         target = base_event.source.get("executable", "")
         if not target:
             return
-            yield
+            yield  # pylint: disable=W0101
 
-        search_query = 'url:"*{0:s}*"'.format(target)
+        search_query = f'url:"*{target:s}*"'
         return_fields = ["url"]
 
         events = self.analyzer_object.event_stream(

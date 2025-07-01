@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """End to end tests of Timesketch upload functionality."""
-import json
 import os
 import random
+import json
 
 from timesketch_api_client import search
-
-from . import interface, manager
+from . import interface
+from . import manager
 
 
 class UploadTest(interface.BaseEndToEndTest):
@@ -48,7 +48,7 @@ class UploadTest(interface.BaseEndToEndTest):
         self.assertions.assertEqual(timeline.index.name, str(rand))
         self.assertions.assertEqual(timeline.index.status, "ready")
 
-        events = sketch.explore("*")
+        events = sketch.explore("*", as_pandas=True)
         self.assertions.assertEqual(len(events), 4)
 
     def test_large_upload_jsonl(self):
@@ -66,7 +66,7 @@ class UploadTest(interface.BaseEndToEndTest):
 
         with open(file_path, "w", encoding="utf-8") as file_object:
             for i in range(4123):
-                string = f'{{"message":"Count {i} {rand}","timestamp":"123456789","datetime":"2015-07-24T19:01:01+00:00","timestamp_desc":"Write time","data_type":"foobarjson"}}\n'
+                string = f'{{"message":"Count {i} {rand}","timestamp":"123456789","datetime":"2015-07-24T19:01:01+00:00","timestamp_desc":"Write time","data_type":"foobarjson"}}\n'  # pylint: disable=line-too-long
                 file_object.write(string)
 
         self.import_timeline("/tmp/large.jsonl", index_name=rand, sketch=sketch)
@@ -84,7 +84,7 @@ class UploadTest(interface.BaseEndToEndTest):
         self.assertions.assertEqual(len(search_obj.table), 4123)
 
         # check that the number of events is correct with a different method
-        events = sketch.explore("data_type:foobarjson")
+        events = sketch.explore("data_type:foobarjson", as_pandas=True)
         self.assertions.assertEqual(len(events), 4123)
 
     def test_upload_jsonl_mapping_exceeds_limit(self):
@@ -137,7 +137,9 @@ class UploadTest(interface.BaseEndToEndTest):
         # check that timeline threw the correct error
         self.assertions.assertEqual(timeline.name, file_path)
         self.assertions.assertEqual(timeline.index.name, str(rand))
-        self.assertions.assertEqual(timeline.index.status, "fail")
+        self.assertions.assertEqual(
+            timeline.data_sources[0]["status"][0]["status"], "fail"
+        )
         self.assertions.assertIn(
             "OPENSEARCH_MAPPING_UPPER_LIMIT", timeline.data_sources[0]["error_message"]
         )
@@ -157,7 +159,7 @@ class UploadTest(interface.BaseEndToEndTest):
 
         with open(file_path, "w", encoding="utf-8") as file_object:
             for i in range(74251):
-                string = f'{{"message":"Count {i} {rand}","timestamp":"123456789","datetime":"2015-07-24T19:01:01+00:00","timestamp_desc":"Write time","data_type":"foobarjsonverlarge"}}\n'
+                string = f'{{"message":"Count {i} {rand}","timestamp":"123456789","datetime":"2015-07-24T19:01:01+00:00","timestamp_desc":"Write time","data_type":"foobarjsonverlarge"}}\n'  # pylint: disable=line-too-long
                 file_object.write(string)
 
         self.import_timeline(file_path, index_name=rand, sketch=sketch)
@@ -183,7 +185,9 @@ class UploadTest(interface.BaseEndToEndTest):
         self.assertions.assertEqual(len(search_obj.table), 74251)
 
         # check that the number of events is correct with a different method
-        events = sketch.explore("data_type:foobarjsonverlarge", max_entries=100000)
+        events = sketch.explore(
+            "data_type:foobarjsonverlarge", as_pandas=True, max_entries=100000
+        )
         self.assertions.assertEqual(len(events), 74251)
 
     def test_large_upload_csv(self):
@@ -228,7 +232,7 @@ class UploadTest(interface.BaseEndToEndTest):
         self.assertions.assertEqual(len(search_obj.table), 3251)
 
         # check that the number of events is correct with a different method
-        events = sketch.explore("data_type:foobarcsv")
+        events = sketch.explore("data_type:foobarcsv", as_pandas=True)
         self.assertions.assertEqual(len(events), 3251)
 
     def test_large_upload_csv_over_flush_limit(self):
@@ -281,8 +285,44 @@ class UploadTest(interface.BaseEndToEndTest):
         self.assertions.assertEqual(len(search_obj.table), 73251)
 
         # check that the number of events is correct with a different method
-        events = sketch.explore("data_type:73kcsv", max_entries=100000)
+        events = sketch.explore("data_type:73kcsv", as_pandas=True, max_entries=100000)
         self.assertions.assertEqual(len(events), 73251)
+
+    def test_datetime_out_of_normal_range_in_csv(self):
+        """Test uploading a file with events from way back and some
+        in a distant future. This test can reveal edge cases that might occur
+        when tools produce a "fake" datetime value"""
+
+        rand = str(random.randint(0, 10000))
+        sketch = self.api.create_sketch(
+            name=f"datetime_out_of_normal_range_in_csv_{rand}"
+        )
+        self.sketch = sketch
+        file_path = "/usr/local/src/timesketch/tests/test_events/validate_time_out_of_range.csv"  # pylint: disable=line-too-long
+        self.import_timeline(file_path, index_name=rand, sketch=sketch)
+        timeline = sketch.list_timelines()[0]
+        # check that timeline was uploaded correctly
+        self.assertions.assertEqual(timeline.name, file_path)
+        self.assertions.assertEqual(timeline.index.name, str(rand))
+        self.assertions.assertEqual(timeline.index.status, "ready")
+
+        # Search for the very old event
+        search_obj = search.Search(sketch)
+        search_obj.query_string = "data_type:csv_very_old_event"
+        search_obj.commit()
+        self.assertions.assertEqual(len(search_obj.table), 1)
+        self.assertions.assertEqual(
+            "1601-01-01" in str(search_obj.table["datetime"]), True
+        )
+
+        # Search for future event check if datetime value is in the result
+        search_obj2 = search.Search(sketch)
+        search_obj2.query_string = "data_type:csv_very_future_event"
+        search_obj2.commit()
+        self.assertions.assertEqual(len(search_obj2.table), 1)
+        self.assertions.assertEqual(
+            "2227-12-31" in str(search_obj2.table["datetime"]), True
+        )
 
     def test_csv_different_timestamps(self):
         """Test uploading a timeline with different precision of timestamps."""
@@ -341,15 +381,15 @@ class UploadTest(interface.BaseEndToEndTest):
         self.assertions.assertEqual(len(search_obj.table), 3)
 
         # check that the number of events is correct with a different method
-        events = sketch.explore("data_type:timestamptest")
+        events = sketch.explore("data_type:timestamptest", as_pandas=True)
         self.assertions.assertEqual(len(events), 3)
 
         # check that events with no timestamp
-        events = sketch.explore("data_type:no_timestamp")
+        events = sketch.explore("data_type:no_timestamp", as_pandas=True)
         self.assertions.assertEqual(len(events), 1)
 
         # check number of events with no datetime
-        events = sketch.explore("data_type:no_datetime")
+        events = sketch.explore("data_type:no_datetime", as_pandas=True)
         self.assertions.assertEqual(len(events), 1)
 
 

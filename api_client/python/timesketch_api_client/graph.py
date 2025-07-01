@@ -18,11 +18,13 @@ import json
 import logging
 
 import dateutil.parser
-import networkx as nx
-import numpy
 import pandas
+import numpy
+import networkx as nx
 
-from . import error, resource
+from . import error
+from . import resource
+
 
 logger = logging.getLogger("timesketch_api.graph")
 
@@ -229,7 +231,9 @@ class Graph(resource.SketchResource):
         self._created_at = time
         self._updated_at = time
 
-    def from_manual(self, data, **kwargs):
+    def from_manual(
+        self, data=None, **kwargs
+    ):  # pylint: disable=arguments-differ; pytype: disable=signature-mismatch
         """Generate a new graph using a dictionary.
 
         Args:
@@ -304,11 +308,11 @@ class Graph(resource.SketchResource):
         self._parse_graph_dict(cache_dict)
         self._description = f"Graph created from the {plugin_name} plugin."
 
-    def from_saved(self, graph_id):
+    def from_saved(self, graph_id):  # pylint: disable=arguments-renamed
         """Initialize the graph object from a saved graph.
 
         Args:
-            graph_id: integer value for the saved graph (primary key).
+            graph_id (int): integer value for the saved graph (primary key).
 
         Raises:
             ValueError: If issues came up during processing.

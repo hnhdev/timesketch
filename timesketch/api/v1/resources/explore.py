@@ -19,29 +19,35 @@ import json
 import zipfile
 
 import prometheus_client
-from flask import abort, jsonify, request, send_file
-from flask_login import current_user, login_required
-from flask_restful import Resource, reqparse
 
-from timesketch.api.v1 import export, resources
-from timesketch.lib import forms, utils
-from timesketch.lib.definitions import (
-    HTTP_STATUS_CODE_BAD_REQUEST,
-    HTTP_STATUS_CODE_FORBIDDEN,
-    HTTP_STATUS_CODE_NOT_FOUND,
-    METRICS_NAMESPACE,
-)
+from flask import abort
+from flask import jsonify
+from flask import current_app
+from flask import request
+from flask import send_file
+from flask_restful import Resource
+from flask_restful import reqparse
+from flask_login import login_required
+from flask_login import current_user
+
+from timesketch.api.v1 import export
+from timesketch.api.v1 import resources
+from timesketch.lib import forms
+from timesketch.lib import utils
 from timesketch.lib.utils import get_validated_indices
+from timesketch.lib.definitions import DEFAULT_SOURCE_FIELDS
+from timesketch.lib.definitions import HTTP_STATUS_CODE_BAD_REQUEST
+from timesketch.lib.definitions import HTTP_STATUS_CODE_FORBIDDEN
+from timesketch.lib.definitions import HTTP_STATUS_CODE_NOT_FOUND
+from timesketch.lib.definitions import METRICS_NAMESPACE
 from timesketch.models import db_session
-from timesketch.models.sketch import (
-    Event,
-    Facet,
-    InvestigativeQuestion,
-    Scenario,
-    SearchHistory,
-    Sketch,
-    View,
-)
+from timesketch.models.sketch import Event
+from timesketch.models.sketch import Sketch
+from timesketch.models.sketch import View
+from timesketch.models.sketch import SearchHistory
+from timesketch.models.sketch import Scenario
+from timesketch.models.sketch import Facet
+from timesketch.models.sketch import InvestigativeQuestion
 
 # Metrics definitions
 METRICS = {
@@ -58,7 +64,7 @@ class ExploreResource(resources.ResourceMixin, Resource):
     """Resource to search the datastore based on a query and a filter."""
 
     @login_required
-    def post(self, sketch_id):
+    def post(self, sketch_id: int):
         """Handles POST request to the resource.
         Handler for /api/v1/sketches/:sketch_id/explore/
 
@@ -138,19 +144,35 @@ class ExploreResource(resources.ResourceMixin, Resource):
         parent = request.json.get("parent", None)
         incognito = request.json.get("incognito", False)
 
+        include_processing_timelines = False
+        if current_app.config.get("SEARCH_PROCESSING_TIMELINES", False):
+            include_processing_timelines = request.json.get(
+                "include_processing_timelines", False
+            )
+
+        return_field_string = form.fields.data
+        if return_field_string:
+            return_fields = [x.strip() for x in return_field_string.split(",")]
+        else:
+            return_fields = query_filter.get("fields", [])
+            return_fields = [field["field"] for field in return_fields]
+            return_fields.extend(DEFAULT_SOURCE_FIELDS)
+
         if not query_filter:
             query_filter = {}
 
-        all_indices = list({t.searchindex.index_name for t in sketch.timelines})
-        indices = query_filter.get("indices", all_indices)
+        all_timeline_ids = [t.id for t in sketch.timelines]
+        indices = query_filter.get("indices", all_timeline_ids)
 
         # If _all in indices then execute the query on all indices
         if "_all" in indices:
-            indices = all_indices
+            indices = all_timeline_ids
 
         # Make sure that the indices in the filter are part of the sketch.
         # This will also remove any deleted timeline from the search result.
-        indices, timeline_ids = get_validated_indices(indices, sketch)
+        indices, timeline_ids = get_validated_indices(
+            indices, sketch, include_processing_timelines
+        )
 
         # Remove indices that don't exist from search.
         indices = utils.validate_indices(indices, self.datastore)
@@ -230,6 +252,7 @@ class ExploreResource(resources.ResourceMixin, Resource):
                 "query": form.query.data,
                 "query_dsl": query_dsl,
                 "query_filter": query_filter,
+                "return_fields": return_fields,
             }
             with zipfile.ZipFile(file_object, mode="w") as zip_file:
                 zip_file.writestr("METADATA", data=json.dumps(form_data))
@@ -240,6 +263,7 @@ class ExploreResource(resources.ResourceMixin, Resource):
                     indices=indices,
                     sketch=sketch,
                     datastore=self.datastore,
+                    return_fields=return_fields,
                     timeline_ids=timeline_ids,
                 )
                 fh.seek(0)
@@ -248,7 +272,7 @@ class ExploreResource(resources.ResourceMixin, Resource):
             return send_file(file_object, mimetype="zip", download_name=file_name)
 
         if scroll_id:
-
+            # pylint: disable=unexpected-keyword-arg
             result = self.datastore.client.scroll(scroll_id=scroll_id, scroll="1m")
         else:
             try:
@@ -259,6 +283,7 @@ class ExploreResource(resources.ResourceMixin, Resource):
                     query_dsl=query_dsl,
                     indices=indices,
                     aggregations=index_stats_agg,
+                    return_fields=return_fields,
                     enable_scroll=enable_scroll,
                     timeline_ids=timeline_ids,
                 )
@@ -300,17 +325,16 @@ class ExploreResource(resources.ResourceMixin, Resource):
         except KeyError:
             pass
 
-        # Total count for query that matches the timelines
-        # Documents that match the query but are not part of a timeline
-        # are not counted
-        count_total_complete = sum(count_per_timeline.values())
+        # Total count for query regardless of returned results.
+        count_total_complete = sum(count_per_index.values())
 
         comments = {}
-        events = Event.get_with_comments(sketch=sketch)
-        for event in events:
-            for comment in event.comments:
-                comments.setdefault(event.document_id, [])
-                comments[event.document_id].append(comment.comment)
+        if "comment" in return_fields:
+            events = Event.get_with_comments(sketch=sketch)
+            for event in events:
+                for comment in event.comments:
+                    comments.setdefault(event.document_id, [])
+                    comments[event.document_id].append(comment.comment)
 
         # Get labels for each event that matches the sketch.
         # Remove all other labels.
@@ -326,7 +350,8 @@ class ExploreResource(resources.ResourceMixin, Resource):
             except KeyError:
                 pass
 
-            event["_source"]["comment"] = comments.get(event["_id"], [])
+            if "comment" in return_fields:
+                event["_source"]["comment"] = comments.get(event["_id"], [])
 
         # Update or create user state view. This is used in the UI to let
         # the user get back to the last state in the explore view.
@@ -420,12 +445,12 @@ class ExploreResource(resources.ResourceMixin, Resource):
             "search_node": search_node,
         }
 
-        # Support OpenSearch
+        # Elasticsearch version 7.x returns total hits as a dictionary.
+        # TODO: Refactor when version 6.x has been deprecated.
         if isinstance(meta["es_total_count"], dict):
             meta["es_total_count"] = meta["es_total_count"].get("value", 0)
 
         schema = {"meta": meta, "objects": result["hits"]["hits"]}
-
         return jsonify(schema)
 
 
@@ -433,7 +458,7 @@ class QueryResource(resources.ResourceMixin, Resource):
     """Resource to get a query."""
 
     @login_required
-    def post(self, sketch_id):
+    def post(self, sketch_id: int):
         """Handles GET request to the resource.
 
         Args:

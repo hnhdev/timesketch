@@ -1,14 +1,13 @@
 version: "3"
 services:
   timesketch:
-    container_name: timesketch
-    build:
-      context: ../../
-      dockerfile: ./docker/dev/build/Dockerfile
+    container_name: timesketch-dev
+    image: us-docker.pkg.dev/osdfir-registry/timesketch/dev:latest
     command: timesketch
     ports:
       - 127.0.0.1:5000:5000
       - 127.0.0.1:5001:5001
+      - 127.0.0.1:8080:8080
     links:
       - opensearch
       - postgres
@@ -34,18 +33,15 @@ services:
 
   opensearch:
     container_name: opensearch
-    image: opensearchproject/opensearch:2.19.0
+    image: opensearchproject/opensearch:2.15.0
     restart: always
-    ports:
-      - 127.0.0.1:9200:9200
     environment:
       - discovery.type=single-node
       - bootstrap.memory_lock=true
       - network.host=0.0.0.0
       - "OPENSEARCH_JAVA_OPTS=-Xms2g -Xmx2g"
       - "DISABLE_INSTALL_DEMO_CONFIG=true"
-      - "DISABLE_SECURITY_PLUGIN=true"
-      - _JAVA_OPTIONS=-XX:UseSVE=0
+      - "DISABLE_SECURITY_PLUGIN=true" # TODO: Enable when we have migrated the python client to Opensearch as well.
 
     ulimits:
       memlock:
@@ -70,15 +66,21 @@ services:
 
   notebook:
     container_name: notebook
-    build:
-      context: build/
-      dockerfile: Dockerfile-notebook
-      additional_contexts:
-        - timesketch_api_client=../../api_client/
+    image: us-docker.pkg.dev/osdfir-registry/timesketch/notebook:latest
     ports:
-      - 127.0.0.1:8844:8080
+      - 127.0.0.1:8844:8844
     restart: on-failure
     links:
       - opensearch
     volumes:
-      - ../../api_client/python:/home/jovyan/timesketch_api_client
+      - ../../:/usr/local/src/timesketch/:ro
+      - /tmp/:/usr/local/src/picadata/
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus:v2.24.1
+    volumes:
+      - ./prometheus:/etc/prometheus
+    ports:
+      - 127.0.0.1:9090:9090
+    command: --config.file=/etc/prometheus/prometheus.yml
+

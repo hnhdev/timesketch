@@ -462,7 +462,19 @@ tsctl similarity_score
 
 #### sketch-info Get information about a sketch
 
-Displays various information about a given sketch.
+Displays detailed information about a specific sketch.
+
+This command retrieves and displays comprehensive information about a
+Timesketch sketch, including:
+
+- **Sketch Details:** The sketch's ID and name.
+- **Active Timelines:** A table listing the active timelines within the
+  sketch, including their search index ID, index name, creation date,
+  user ID, description, status, timeline name, and timeline ID.
+- **Sharing Information:** Details about users and groups with whom the
+  sketch is shared.
+- **Sketch Status:** The current status of the sketch (e.g., "ready",
+  "archived").
 
 ```shell
 tsctl sketch-info
@@ -472,13 +484,12 @@ Example:
 
 ```shell
 Sketch 1 Name: (aaa)
-searchindex_id index_name                       created_at                 user_id description
-1              a17732074d8b492e934ef79910bfefa1 2022-10-21 15:06:52.849124 1       20200918_0417_DESKTOP-SDN1RPT
-3              88002da782f64061bf3703bc782b6006 2022-10-21 15:19:26.072964 1       all_packets
-1              a17732074d8b492e934ef79910bfefa1 2022-10-21 15:28:55.474166 1       E01-DC01_20200918_0347_CDrive
-4              11d761cd266640d798e30bb897c8dd4e 2022-10-21 15:32:15.060184 1       autoruns-desktop-sdn1rpt_fresh_import
-3              88002da782f64061bf3703bc782b6006 2022-10-31 10:15:12.316273 1       sigma_events
-3              88002da782f64061bf3703bc782b6006 2022-10-31 10:15:48.592320 1       sigma_events2
+searchindex_id index_name                       created_at                 user_id description             status timeline_name           timeline_id
+1              3e062029b52f4e1a8a103488b99bc2b3 2025-03-18 14:49:52.402364 1       my_file_with_a_timeline ready  my_file_with_a_timeline 2
+1              3e062029b52f4e1a8a103488b99bc2b3 2025-03-18 16:21:07.707528 1       evtx_part               ready  evtx_part               3
+1              3e062029b52f4e1a8a103488b99bc2b3 2025-03-21 15:24:55.935364 1       sigma_events            ready  sigma_events            10
+10             9a0f22670bf74ba6884f3ba9b261bf13 2025-03-21 15:31:45.279662 1       evtx                    ready  evtx                    11
+1              3e062029b52f4e1a8a103488b99bc2b3 2025-03-21 15:41:10.860161 1       sigma_eventsa           ready  sigma_eventsa           12
 Shared with:
     Users: (user_id, username)
         3: bar
@@ -497,15 +508,116 @@ id status created_at                 user_id
 In some cases, logs present a OpenSearch Index id and it is not easy to find out
 which Sketch that index is related to.
 
-Therefore the following command can be used:
+Therefore the following command can be used `tsctl searchindex-info`:
+
+Displays detailed information about a specific search index. You can specify the index using either its database ID or its OpenSearch index name. 
+The command shows the search index ID and name, and lists all timelines associated with the index, including their IDs, names, and associated sketch IDs and names.
 
 ```bash
-# tsctl searchindex-info --searchindex_id asd
+# tsctl searchindex-info --searchindex_id 99
 Searchindex: asd not found in database.
-# tsctl searchindex-info --searchindex_id 4c5afdf60c6e49499801368b7f238353
+# tsctl searchindex-info --searchindex_id 1
+Searchindex: 1 Name: sigma_events found in database.
+Corresponding Timeline id: 3 in Sketch Id: 2
+Corresponding Sketch id: 2 Sketch name: asdasd
+# tsctl searchindex-info --index_name 4c5afdf60c6e49499801368b7f238353
 Searchindex: 4c5afdf60c6e49499801368b7f238353 Name: sigma_events found in database.
 Corresponding Timeline id: 3 in Sketch Id: 2
 Corresponding Sketch id: 2 Sketch name: asdasd
+```
+
+If neither `searchindex_id` nor `index_name` is provided, an error message is printed. If no matching search index is found, an appropriate message is printed
+
+### Timeline status
+
+The `tsctl timeline-status` command allows to get or set a timeline status.
+This can be useful in the following scenarios:
+
+* Monitoring processing In large-scale investigations, timelines can take a considerable amount of time to process.
+This feature allows administrators or automated scripts to monitor the processing status of timelines, ensuring that they are progressing as expected.
+
+* Automated Status updates: Scripts can be used to automatically update the status of timelines based on the results of automated analysis or processing steps. For example, if an automated script detects a critical error during analysis, it can set the timeline status to "fail."
+
+* Toubeshooting and Error handling: 
+** Quickly identifying timelines with a "fail" status allows investigators to troubleshoot issues and re-process data if necessary.
+** By monitoring the status of timelines, administrators can identify potential bottlenecks or errors in the processing pipeline.
+** Set the status to `fail` is a task is stuck.
+
+Usage:
+
+```bash
+tsctl timeline-status [OPTIONS] TIMELINE_ID
+--action [get|set]
+        Specify whether to get or set the timeline status.
+        - "get": Retrieves the current status of the timeline.
+        - "set": Sets the status of the timeline to the value specified by "--status".
+        (Required)
+
+    --status [ready|processing|fail]
+        The desired status to set for the timeline.
+        This option is only valid when "--action" is set to "set".
+        Valid options are:
+        - "ready": Indicates that the timeline is ready for analysis.
+        - "processing": Indicates that the timeline is currently being processed.
+        - "fail": Indicates that the timeline processing failed.
+        (Required when --action is set to set)
+```
+
+Examples:
+```bash
+# Get the status of timeline with ID 123:
+    tsctl timeline-status --action get 123
+
+    # Set the status of timeline with ID 456 to "ready":
+    tsctl timeline-status --action set --status ready 456
+
+    # Set the status of timeline with ID 789 to "fail":
+    tsctl timeline-status --action set --status fail 789
+
+    # Try to set a status without the action set to set.
+    tsctl timeline-status --status fail 789
+    # This will fail and display an error message.
+```
+
+### Searchindex-status
+
+The `tsctl searchindex-status` command allows to get or set a searchindex status.
+
+Usage:
+```
+tsctl searchindex-status --help
+Usage: tsctl searchindex-status [OPTIONS] SEARCHINDEX_ID
+
+  Get or set a searchindex status
+
+  If "action" is "set", the given value of status will be written in the
+  status.
+
+  Args:     action: get or set searchindex status.     status: searchindex
+  status. Only valid choices are ready, processing, fail.
+
+Options:
+  --action [get|set]              get or set timeline status.
+  --status [ready|processing|fail]
+                                  get or set timeline status.
+  --searchindex_id TEXT           Searchindex ID to search for e.g.
+                                  4c5afdf60c6e49499801368b7f238353.
+                                  [required]
+  --help                          Show this message and exit.
+```
+
+
+Examples:
+```bash
+tsctl searchindex-status --action set 1 --status fail
+Searchindex 1 status set to fail
+To verify run: tsctl searchindex-status 1 --action get
+tsctl searchindex-status --action set --status fail 1
+Searchindex 1 status set to fail
+To verify run: tsctl searchindex-status 1 --action get
+tsctl searchindex-status 1 --action get
+searchindex_id index_name                       created_at                 user_id description status
+1              f609b138aa1e4c448ece6c012dcb2bab 2025-03-07 09:23:37.172143 1       #           fail
 ```
 
 ### Sigma
@@ -660,4 +772,187 @@ tsctl analyzer-stats sigma --scope many_hits --result_text_search 71a52
 45  2.833333     0                                * Scheduler 71a5257c-222f-4898-a117-694d6c63457c           60 2023-01-04 17:09:04.046003
 46  2.833333     0                                * Scheduler 71a5257c-222f-4898-a117-694d6c63457c           59 2023-01-04 17:09:04.014973
 48  2.750000     0                                * Scheduler 71a5257c-222f-4898-a117-694d6c63457c           63 2023-01-04 17:09:04.148185
+```
+
+### Celery Task Management
+
+These commands allow you to inspect and manage Celery tasks within the Timesketch application.
+
+#### `tsctl celery-tasks-redis`
+
+**Description:**
+
+Checks and displays the status of all Celery tasks stored in Redis. This command connects to the Redis instance used by Celery to store task metadata and retrieves information about all tasks. It then presents this information in a formatted table, including the task ID, name, status, and result.
+
+Notes:
+
+* Celery tasks have a result_expire date, which by default is one day. After that, the results will no longer be available.
+
+**Usage:**
+
+```bash
+tsctl celery-tasks-redis
+```
+
+**Output:**
+
+A table with the following columns:
+
+* Task ID: The unique identifier for the Celery task.
+* Name: The name of the task.
+* Status: The current status of the task (e.g., SUCCESS, FAILURE, PENDING).
+* Result: The result of the task if it has completed successfully.
+
+```
+Task ID                          Name Status  Result
+13a995db28d2479b854db177d1301ecb None SUCCESS 3e062029b52f4e1a8a103488b99bc2b3
+1829df81cb534ab29fe44d1e8c605c95 None SUCCESS 3e062029b52f4e1a8a103488b99bc2b3
+ffd3d6157e0f458bbe5f4c97e6d70d03 None SUCCESS 9a0f22670bf74ba6884f3ba9b261bf13
+```
+
+#### tsctl celery-tasks
+
+Shows running or past Celery tasks. This command provides various ways to inspect and view the status of Celery tasks within the Timesketch application. It can display information about a specific task, list active tasks, or show all tasks (including pending, active, and failed).
+
+**Usage**
+
+```bash
+tsctl celery-tasks [OPTIONS]
+```
+
+Options:
+
+* `--task_id TEXT`: Show information about a specific task ID.
+* `--active`: Show only active tasks.
+* `--show_all`: Show all tasks, including pending, active, and failed.
+
+**Notes**
+
+* Celery tasks have a `result_expire date`, which defaults to one day. After this period, task results may no longer be available.
+* When displaying all tasks, the status of each task is retrieved, which may take some time.
+* If no arguments are provided, it will print a message to use `--active` or `--show_all`.
+
+**Examples**
+
+```bash
+tsctl celery-tasks --task_id <task_id>
+tsctl celery-tasks --active
+tsctl celery-tasks --show_all
+```
+
+#### celery-revoke-task
+
+Revokes (cancels) a Celery task. This command attempts to revoke a running Celery task, effectively canceling its execution. It uses the task ID to identify the specific task to revoke.
+
+Note: For short tasks, they have to be cancelled quick.
+
+**Usage**
+
+```bash
+tsctl celery-revoke-task  TASK_ID
+```
+
+Example:
+```
+tsctl celery-revoke-task 8115648e-944c-4452-962e-644041603419
+```
+
+#### list-config
+
+**Description:**
+
+Lists all configuration variables currently loaded by the Timesketch Flask application (`current_app.config`).
+
+This command iterates through the application's configuration settings. 
+
+It automatically identifies keys commonly associated with sensitive information (like `SECRET_KEY`, `PASSWORD`, `API_KEY`, `TOKEN`, etc.) based on a predefined list of keywords.
+To prevent accidental exposure, the values corresponding to these sensitive keys are redacted and replaced with `******** (redacted)` in the output. All other configuration key-value pairs are displayed as they are loaded.
+
+The output is sorted alphabetically by key for consistent and predictable results. A note is included at the end to remind the user that some values may have been redacted for security reasons.
+
+**Usage:**
+
+```bash
+tsctl list-config
+Timesketch Configuration Variables:
+-----------------------------------
+ANALYZERS_DEFAULT_KWARGS: {}
+APPLICATION_ROOT: /
+AUTO_SKETCH_ANALYZERS: []
+AUTO_SKETCH_ANALYZERS_KWARGS: {}
+CELERY_BROKER_URL: redis://redis:6379
+CELERY_RESULT_BACKEND: redis://redis:6379
+CONTEXT_LINKS_CONFIG_PATH: /etc/timesketch/context_links.yaml
+DATA_FINDER_PATH: /etc/timesketch/data_finder.yaml
+DEBUG: False
+OPENSEARCH_HOST: 127.0.0.1
+OPENSEARCH_PORT: 9200
+SECRET_KEY: ******** (redacted)
+SQLALCHEMY_DATABASE_URI: ******** (redacted)
+UPLOAD_ENABLED: True
+...
+-----------------------------------
+Note: Some values might be sensitive (e.g., SECRET_KEY, passwords).
+```
+
+### export-sketch
+
+Exports a Timesketch sketch to a zip archive. The archive contains:
+
+1.  **`metadata.json`**: A comprehensive JSON file detailing the sketch, including:
+    *   Basic sketch information (ID, name, description, status, timestamps, owner).
+    *   Permissions and sharing details.
+    *   Associated timelines with their configurations and data sources.
+    *   Saved views (queries, filters, DSL).
+    *   Stories, including their content.
+    *   Aggregations and aggregation groups.
+    *   Saved graphs.
+    *   Analysis sessions and their results.
+    *   DFIQ scenarios, including nested facets and investigative questions.
+    *   Sketch attributes.
+    *   Comments linked to specific events within the sketch.
+    *   Export timestamp and Timesketch version.
+2.  **Event Data File**: (e.g., `events.csv` or `events.jsonl`)
+    *   All events from the sketch's active (not failed or processing) timelines, processed in batches to conserve memory.
+    *   The format can be specified as CSV (default) or JSONL using the `--output-format` option.
+    *   By default all fields are exported. Using `--default-fields` a predefined set (DEFAULT_SOURCE_FIELDS in `timesketch/lib/definitions.py`) of common event fields are exported.
+
+**WARNING:** Re-importing this archive into Timesketch is not natively supported. This export is primarily for data archival, external analysis, or manual migration.
+
+Progress messages are printed to the console during the export process.
+
+**Usage:**
+
+Parameters:
+
+* **<SKETCH_ID>:** (Required) The ID of the sketch to export.
+* **--filename / -f:** (Optional) The name for the output zip file. Default: sketch_{sketch_id}_{output_format}_export.zip
+* **--output-format:** (Optional) The format for the event data ('csv' or 'jsonl'). Default: 'csv'.
+* **--all-fields:** (Optional default: True) Export all event fields instead of the default set.
+
+*Note on Container Usage:* When running this command within a container (e.g., Docker), the output zip file is written inside the container's filesystem. Ensure you write to a mounted volume or copy the file out of the container afterwards.
+
+Example:
+
+```bash
+tsctl export-sketch  1
+
+Exporting sketch [1] "aaaa" to sketch_1_csv_export.zip...
+
+WARNING: There is currently no native method to re-import this exported archive back into Timesketch.
+
+Gathering metadata...
+  Processing comments for 4 event(s)...
+  2025-05-14 10:02:00 INFO     GET http://opensearch:9200/ [status:200 request:0.008s]
+  Exporting all event fields.
+  Requesting event data (preferring JSONL)...
+2025-05-14 10:02:00 INFO     POST http://opensearch:9200/484a472fd004a72f2ee857c39a4fb17c,9c49430d1e5f42849bdb253647e1f836,5caa30a18efa4333971b42957d86d09e/_search?scroll=1m&search_type=query_then_fetch [status:200 request:0.214s]
+
+[...]
+
+  Detected non-JSONL format in response (assuming CSV).
+  303490 events processed for export.
+  Input is not JSONL, using as CSV...
+Creating zip archive...
+Sketch exported successfully to sketch_1_csv_export.zip
 ```

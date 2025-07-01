@@ -13,40 +13,50 @@
 # limitations under the License.
 """Entry point for the application."""
 
-from __future__ import unicode_literals
 
 import logging
 import os
 import sys
+from typing import Optional, Union
 
-import six
-from celery import Celery
+
 from flask import Flask
-from flask_login import LoginManager, login_required
+from celery import Celery
+
+from flask_login import LoginManager
+from flask_login import login_required
 from flask_migrate import Migrate
 from flask_restful import Api
 from flask_wtf import CSRFProtect
 
 from timesketch.api.v1.routes import API_ROUTES as V1_API_ROUTES
 from timesketch.lib.errors import ApiHTTPError
-from timesketch.models import configure_engine, init_db
+from timesketch.models import configure_engine
+from timesketch.models import init_db
 from timesketch.models.user import User
 from timesketch.views.auth import auth_views
 from timesketch.views.spa import spa_views
 
 
-def create_app(config=None):
+def create_app(config: Optional[Union[str, object]] = None, legacy_ui: bool = False):
     """Create the Flask app instance that is used throughout the application.
 
     Args:
-        config: Path to configuration file as a string or an object with config
-        directives.
+        config: (str or object, optional) Path to configuration file as a string
+                or an object with config directives.
+        legacy_ui: (bool, optional) Temporary flag to indicate to serve the old UI.
+                  TODO: Remove this when the old UI has been removed.
 
     Returns:
         Application object (instance of flask.Flask).
     """
     template_folder = "frontend-ng/dist"
     static_folder = "frontend-ng/dist"
+
+    # Serve the old UI.
+    if legacy_ui:
+        template_folder = "frontend/dist"
+        static_folder = "frontend/dist"
 
     app = Flask(__name__, template_folder=template_folder, static_folder=static_folder)
 
@@ -60,7 +70,7 @@ def create_app(config=None):
         else:
             config = legacy_path
 
-    if isinstance(config, six.text_type):
+    if isinstance(config, str):
         os.environ["TIMESKETCH_SETTINGS"] = config
         try:
             app.config.from_envvar("TIMESKETCH_SETTINGS")
@@ -70,8 +80,8 @@ def create_app(config=None):
                     "Warning, EMAIL_USER_WHITELIST has been deprecated. "
                     "Please update timesketch.conf."
                 )
-        except IOError:
-            sys.stderr.write("Config file {0} does not exist.\n".format(config))
+        except OSError:
+            sys.stderr.write(f"Config file {config} does not exist.\n")
             sys.exit()
     else:
         app.config.from_object(config)
@@ -109,7 +119,7 @@ def create_app(config=None):
     # Plaso version that we support
     if app.config["UPLOAD_ENABLED"]:
         try:
-
+            # pylint: disable=import-outside-toplevel
             from plaso import __version__ as plaso_version
 
             app.config["PLASO_VERSION"] = plaso_version
@@ -137,6 +147,7 @@ def create_app(config=None):
         api_v1.add_resource(*route)
 
     # Returns 404 for invalid api routes
+    # pylint: disable=unused-variable
     @app.route("/api/v1/<path:path>")
     @login_required
     def handle_invalid_api_route(path):
@@ -152,7 +163,7 @@ def create_app(config=None):
         )
 
     # Register error handlers
-
+    # pylint: disable=unused-variable
     @app.errorhandler(ApiHTTPError)
     def handle_api_http_error(error):
         """Error handler for API HTTP errors.
@@ -168,7 +179,7 @@ def create_app(config=None):
     login_manager.login_view = "user_views.login"
 
     # This is used by the flask_login extension.
-
+    # pylint: disable=unused-variable
     @login_manager.user_loader
     def load_user(user_id):
         """Based on a user_id (database primary key for a user) this function

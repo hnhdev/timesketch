@@ -13,43 +13,42 @@
 # limitations under the License.
 """This module implements HTTP request handlers for the user views."""
 
-from __future__ import unicode_literals
 
 import requests
-from flask import (
-    Blueprint,
-    abort,
-    current_app,
-    redirect,
-    render_template,
-    request,
-    session,
-    url_for,
-)
-from flask_login import current_user, login_user, logout_user
+
+from flask import abort
+from flask import Blueprint
+from flask import current_app
+from flask import redirect
+from flask import render_template
+from flask import request
+from flask import session
+from flask import url_for
+
 from oauthlib import oauth2
 
-from timesketch.lib.definitions import (
-    HTTP_STATUS_CODE_BAD_REQUEST,
-    HTTP_STATUS_CODE_OK,
-    HTTP_STATUS_CODE_UNAUTHORIZED,
-)
+from flask_login import current_user
+from flask_login import login_user
+from flask_login import logout_user
+
+from timesketch.lib.definitions import HTTP_STATUS_CODE_UNAUTHORIZED
+from timesketch.lib.definitions import HTTP_STATUS_CODE_BAD_REQUEST
+from timesketch.lib.definitions import HTTP_STATUS_CODE_OK
 from timesketch.lib.forms import UsernamePasswordForm
-from timesketch.lib.google_auth import (
-    CSRF_KEY,
-    DiscoveryDocumentError,
-    JwtFetchError,
-    JwtKeyError,
-    JwtValidationError,
-    decode_jwt,
-    get_encoded_jwt_over_https,
-    get_oauth2_authorize_url,
-    get_oauth2_discovery_document,
-    get_public_key_for_jwt,
-    validate_jwt,
-)
+from timesketch.lib.google_auth import get_public_key_for_jwt
+from timesketch.lib.google_auth import get_oauth2_discovery_document
+from timesketch.lib.google_auth import get_oauth2_authorize_url
+from timesketch.lib.google_auth import get_encoded_jwt_over_https
+from timesketch.lib.google_auth import decode_jwt
+from timesketch.lib.google_auth import validate_jwt
+from timesketch.lib.google_auth import JwtValidationError
+from timesketch.lib.google_auth import JwtKeyError
+from timesketch.lib.google_auth import JwtFetchError
+from timesketch.lib.google_auth import DiscoveryDocumentError
+from timesketch.lib.google_auth import CSRF_KEY
 from timesketch.models import db_session
-from timesketch.models.user import Group, User
+from timesketch.models.user import Group
+from timesketch.models.user import User
 
 # Register flask blueprint
 auth_views = Blueprint("user_views", __name__)
@@ -89,7 +88,7 @@ def login():
     # Google Identity-Aware Proxy authentication (using JSON Web Tokens)
     if current_app.config.get("GOOGLE_IAP_ENABLED", False):
         encoded_jwt = request.environ.get("HTTP_X_GOOG_IAP_JWT_ASSERTION", None)
-
+        # pylint: disable=broad-except
         if encoded_jwt:
             expected_audience = current_app.config.get("GOOGLE_IAP_AUDIENCE")
             expected_issuer = current_app.config.get("GOOGLE_IAP_ISSUER")
@@ -104,11 +103,6 @@ def login():
                 email = decoded_jwt.get("email")
                 if email:
                     user = User.get_or_create(username=email, name=email)
-                    group = Group.get_or_create(name="GOOGLE-IAP")
-                    if group not in user.groups:
-                        user.groups.append(group)
-
-                    db_session.commit()
                     login_user(user)
 
             except (ImportError, NameError, UnboundLocalError):
@@ -119,7 +113,7 @@ def login():
                 JwtKeyError,
                 Exception,
             ) as e:
-                current_app.logger.error("{}".format(e))
+                current_app.logger.error(f"{e}")
 
     # SSO login based on environment variable, e.g. REMOTE_USER.
     if current_app.config.get("SSO_ENABLED", False):
@@ -158,7 +152,7 @@ def login():
             db_session.commit()
 
     # Login form POST
-
+    # pylint: disable=using-constant-test
     form = UsernamePasswordForm()
     if form.validate_on_submit:
         user = User.query.filter_by(username=form.username.data).first()
@@ -233,13 +227,13 @@ def validate_api_token():
     # Sending a request to Google to verify that the access token
     # is valid, to be able to validate the session.
     data = {"access_token": token}
-    bearer_token_response = requests.post(TOKEN_URI, data=data)
+    bearer_token_response = requests.post(TOKEN_URI, data=data, timeout=60)
     if bearer_token_response.status_code != HTTP_STATUS_CODE_OK:
         return abort(HTTP_STATUS_CODE_BAD_REQUEST, "Unable to validate access token.")
     bearer_token_json = bearer_token_response.json()
 
     data = {"id_token": id_token}
-    token_response = requests.post(TOKEN_URI, data=data)
+    token_response = requests.post(TOKEN_URI, data=data, timeout=60)
     token_json = token_response.json()
 
     verified = token_json.get("email_verified", False)
@@ -266,11 +260,11 @@ def validate_api_token():
     except DiscoveryDocumentError as e:
         return abort(
             HTTP_STATUS_CODE_BAD_REQUEST,
-            "Unable to discover document, with error: {0!s}".format(e),
+            f"Unable to discover document, with error: {e!s}",
         )
 
     expected_issuer = discovery_document["issuer"]
-
+    # pylint: disable=broad-except
     try:
         validate_jwt(token_json, expected_issuer)
     except (ImportError, NameError, UnboundLocalError):
@@ -282,14 +276,14 @@ def validate_api_token():
     ) as e:
         return abort(
             HTTP_STATUS_CODE_UNAUTHORIZED,
-            "Unable to validate the JWT token, with error: {0!s}.".format(e),
+            f"Unable to validate the JWT token, with error: {e!s}.",
         )
 
     read_client_id = token_json.get("aud", "")
     if read_client_id not in ALLOWED_CLIENT_IDS:
         return abort(
             HTTP_STATUS_CODE_UNAUTHORIZED,
-            "Client ID {0:s} does not match server configuration for "
+            "Client ID {:s} does not match server configuration for "
             "client".format(read_client_id),
         )
 
@@ -319,7 +313,7 @@ def validate_api_token():
         if domain.lower() not in ALLOWED_DOMAINS:
             return abort(
                 HTTP_STATUS_CODE_UNAUTHORIZED,
-                "Domain {0:s} is not allowed to authenticate against this "
+                "Domain {:s} is not allowed to authenticate against this "
                 "instance.".format(domain),
             )
 
@@ -366,16 +360,14 @@ def google_openid_connect():
     error = request.args.get("error", None)
 
     if error:
-        current_app.logger.error("OAuth2 flow error: {}".format(error))
-        return abort(
-            HTTP_STATUS_CODE_BAD_REQUEST, "OAuth2 flow error: {0!s}".format(error)
-        )
+        current_app.logger.error(f"OAuth2 flow error: {error}")
+        return abort(HTTP_STATUS_CODE_BAD_REQUEST, f"OAuth2 flow error: {error!s}")
 
     try:
         code = request.args["code"]
         client_csrf_token = request.args.get("state")
         server_csrf_token = session[CSRF_KEY]
-    except KeyError as e:
+    except KeyError:
         return abort(
             HTTP_STATUS_CODE_BAD_REQUEST, "Client CSRF error, no CSRF key stored"
         )
@@ -386,14 +378,14 @@ def google_openid_connect():
     try:
         encoded_jwt = get_encoded_jwt_over_https(code)
     except JwtFetchError as e:
-        return abort(HTTP_STATUS_CODE_BAD_REQUEST, "Jwt Fetch error, {0!s}".format(e))
+        return abort(HTTP_STATUS_CODE_BAD_REQUEST, f"Jwt Fetch error, {e!s}")
 
     try:
         discovery_document = get_oauth2_discovery_document()
     except DiscoveryDocumentError as e:
         return abort(
             HTTP_STATUS_CODE_BAD_REQUEST,
-            "Unable to discover document, with error: {0!s}".format(e),
+            f"Unable to discover document, with error: {e!s}",
         )
 
     algorithm = discovery_document["id_token_signing_alg_values_supported"][0]
@@ -407,10 +399,10 @@ def google_openid_connect():
         decoded_jwt = decode_jwt(encoded_jwt, public_key, algorithm, expected_audience)
         validate_jwt(decoded_jwt, expected_issuer, expected_domain)
     except (JwtValidationError, JwtKeyError) as e:
-        current_app.logger.error("{}".format(e))
+        current_app.logger.error(f"{e}")
         return abort(
             HTTP_STATUS_CODE_UNAUTHORIZED,
-            "Unable to validate request, with error: {0!s}".format(e),
+            f"Unable to validate request, with error: {e!s}",
         )
 
     validated_email = decoded_jwt.get("email")

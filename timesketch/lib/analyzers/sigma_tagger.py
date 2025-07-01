@@ -1,11 +1,11 @@
 """Index analyzer plugin for sigma."""
 
-from __future__ import unicode_literals
-
 import logging
+from typing import Optional
 
+from timesketch.lib.analyzers import interface
+from timesketch.lib.analyzers import manager
 import timesketch.lib.sigma_util as ts_sigma_lib
-from timesketch.lib.analyzers import interface, manager
 
 logger = logging.getLogger("timesketch.analyzers.sigma_tagger")
 
@@ -29,7 +29,13 @@ class SigmaPlugin(interface.BaseAnalyzer):
         self._rule = kwargs.get("rule")
         super().__init__(index_name, sketch_id, timeline_id=timeline_id)
 
-    def run_sigma_rule(self, query, rule_title, tag_list=None, rule_id=None):
+    def run_sigma_rule(
+        self,
+        query: str,
+        rule_title: str,
+        tag_list: Optional[list] = None,
+        rule_id: Optional[str] = None,
+    ):
         """Runs a sigma rule and applies the tags from the rule.
 
         This method is only intended to be called if the Status of a rule is
@@ -105,15 +111,15 @@ class SigmaPlugin(interface.BaseAnalyzer):
                 tag_list=rule.get("tags"),
                 rule_id=rule.get("id"),
             )
-        except:
-            error_msg = "* {0:s} {1:s}".format(rule_name, rule.get("id"))
+        except:  # pylint: disable=bare-except
+            error_msg = "* {:s} {:s}".format(rule_name, rule.get("id"))
             logger.error(
                 error_msg,
                 exc_info=True,
             )
             return error_msg
 
-        return f"{tagged_events_counter} events tagged for rule [{rule_name}] ({rule.get('id')})"
+        return f"{tagged_events_counter} events tagged for rule [{rule_name}] ({rule.get('id')})"  # pylint: disable=line-too-long
 
     @staticmethod
     def get_kwargs():
