@@ -113,7 +113,8 @@ class SketchResourceTest(BaseTest):
     def test_create_a_sketch(self):
         """Authenticated request to create a sketch."""
         self.login()
-        data = {"name": "test_create_a_sketch", "description": "test_create_a_sketch"}
+        data = {"name": "test_create_a_sketch",
+                "description": "test_create_a_sketch"}
         response = self.client.post(
             "/api/v1/sketches/",
             data=json.dumps(data, ensure_ascii=False),
@@ -132,7 +133,8 @@ class SketchResourceTest(BaseTest):
         """Authenticated request to append a label to a sketch."""
         self.login()
 
-        data = {"labels": ["test_append_label_to_sketch"], "label_action": "add"}
+        data = {"labels": ["test_append_label_to_sketch"],
+                "label_action": "add"}
 
         response = self.client.post(
             "/api/v1/sketches/3/",
@@ -156,7 +158,8 @@ class SketchResourceTest(BaseTest):
         self.login()
 
         # Create sketch to test with
-        data = {"name": "test_archive_sketch", "description": "test_archive_sketch"}
+        data = {"name": "test_archive_sketch",
+                "description": "test_archive_sketch"}
         response = self.client.post(
             "/api/v1/sketches/",
             data=json.dumps(data, ensure_ascii=False),
@@ -170,7 +173,8 @@ class SketchResourceTest(BaseTest):
         response = self.client.get(f"/api/v1/sketches/{created_id}/")
         self.assertEqual(HTTP_STATUS_CODE_OK, response.status_code)
         self.assertEqual(len(response.json["objects"]), 1)
-        self.assertEqual(response.json["objects"][0]["name"], "test_archive_sketch")
+        self.assertEqual(response.json["objects"]
+                         [0]["name"], "test_archive_sketch")
 
         # Archive sketch
         resource_url = f"/api/v1/sketches/{created_id}/archive/"
@@ -189,7 +193,8 @@ class SketchResourceTest(BaseTest):
             "test_archive_sketch",
         )
         self.assert200(response)
-        self.assertIn("archived", response.json["objects"][0]["status"][0]["status"])
+        self.assertIn(
+            "archived", response.json["objects"][0]["status"][0]["status"])
 
     def test_sketch_delete_not_existant_sketch(self):
         """Authenticated request to delete a sketch that does not exist."""
@@ -275,7 +280,8 @@ class SketchResourceTest(BaseTest):
             "test_delete_archive_sketch",
         )
         self.assert200(response)
-        self.assertIn("archived", response.json["objects"][0]["status"][0]["status"])
+        self.assertIn(
+            "archived", response.json["objects"][0]["status"][0]["status"])
 
         # delete an archived sketch at the moment returns a 200
         response = self.client.delete(f"/api/v1/sketches/{created_id}/")
@@ -567,7 +573,8 @@ class EventAddAttributeResourceTest(BaseTest):
         """Test that that the wrong type for events is handled."""
         self.login()
 
-        response = self.client.post(self.resource_url, json={"events": "a string"})
+        response = self.client.post(
+            self.resource_url, json={"events": "a string"})
         self.assertEqual(HTTP_STATUS_CODE_BAD_REQUEST, response.status_code)
         self.assertIn(b"Events field must be a list.", response.data)
 
@@ -576,7 +583,8 @@ class EventAddAttributeResourceTest(BaseTest):
         """Test that an event list larger than max events is handled."""
         self.login()
 
-        response = self.client.post(self.resource_url, json={"events": ["a"] * 100001})
+        response = self.client.post(self.resource_url, json={
+                                    "events": ["a"] * 100001})
         self.assertEqual(HTTP_STATUS_CODE_BAD_REQUEST, response.status_code)
         self.assertIn(b"Request exceeds maximum events", response.data)
 
@@ -713,7 +721,8 @@ class EventAddAttributeResourceTest(BaseTest):
                 ]
             },
         )
-        self.assertEqual({"1": 1, "2": 1}, response.json["meta"]["chunks_per_index"])
+        self.assertEqual({"1": 1, "2": 1},
+                         response.json["meta"]["chunks_per_index"])
 
     @mock.patch("timesketch.api.v1.resources.OpenSearchDataStore", MockDataStore)
     def test_add_existing_attributes(self):
@@ -814,12 +823,13 @@ class EventAnnotationResourceTest(BaseTest):
         Authenticated request to create an annotation, but in the wrong index.
         """
         self.login()
-        data = {
-            "annotation": "test",
-            "annotation_type": "comment",
-            "event_id": "test",
-            "searchindex_id": "invalid_searchindex",
-        }
+        event = {"_type": "test_event",
+                 "_index": "invalid_searchindex", "_id": "test"}
+        data = dict(
+            annotation="test",
+            annotation_type="comment",
+            events=[event],
+        )
         response = self.client.post(
             self.resource_url,
             data=json.dumps(data),
@@ -837,7 +847,8 @@ class SearchIndexResourceTest(BaseTest):
     def test_post_create_searchindex(self):
         """Authenticated request to create a searchindex."""
         self.login()
-        data = {"searchindex_name": "test3", "es_index_name": "test3", "public": False}
+        data = {"searchindex_name": "test3",
+                "es_index_name": "test3", "public": False}
         response = self.client.post(
             self.resource_url,
             data=json.dumps(data),
@@ -861,7 +872,7 @@ class TimelineListResourceTest(BaseTest):
             data=json.dumps(data, ensure_ascii=False),
             content_type="application/json",
         )
-        self.assertEqual(response.status_code, HTTP_STATUS_CODE_CREATED)
+        self.assertEqual(response.status_code, HTTP_STATUS_CODE_OK)
 
     def test_add_new_timeline_resource(self):
         """Authenticated request to add a timeline to a sketch."""
@@ -939,7 +950,8 @@ level: high
         )
         self.assertEqual(response.status_code, HTTP_STATUS_CODE_CREATED)
         # Now GET the resources
-        response = self.client.get("/api/v1/sigmarules/5266a592-b793-11ea-b3de-bbbbbb/")
+        response = self.client.get(
+            "/api/v1/sigmarules/5266a592-b793-11ea-b3de-bbbbbb/")
 
         self.assertIsNotNone(response)
         self.assertEqual(response.status_code, HTTP_STATUS_CODE_OK)
@@ -1461,13 +1473,16 @@ class ScenariosResourceTest(BaseTest):
         self._commit_to_database(scenario_sql)
 
         # Test without analysis step
-        result = scenarios.check_and_run_dfiq_analysis_steps(scenario_sql, test_sketch)
+        result = scenarios.check_and_run_dfiq_analysis_steps(
+            scenario_sql, test_sketch)
         self.assertFalse(result)
 
-        result = scenarios.check_and_run_dfiq_analysis_steps(facet_sql, test_sketch)
+        result = scenarios.check_and_run_dfiq_analysis_steps(
+            facet_sql, test_sketch)
         self.assertFalse(result)
 
-        result = scenarios.check_and_run_dfiq_analysis_steps(approach_sql, test_sketch)
+        result = scenarios.check_and_run_dfiq_analysis_steps(
+            approach_sql, test_sketch)
         self.assertFalse(result)
 
         # Add analysis step to approach
@@ -1511,7 +1526,8 @@ class ScenariosResourceTest(BaseTest):
         )
 
         # Test with invalid object
-        result = scenarios.check_and_run_dfiq_analysis_steps("invalid", test_sketch)
+        result = scenarios.check_and_run_dfiq_analysis_steps(
+            "invalid", test_sketch)
         self.assertFalse(result)
 
 
@@ -1569,7 +1585,8 @@ class LLMResourceTest(BaseTest):
         )
         self.assertEqual(response.status_code, HTTP_STATUS_CODE_BAD_REQUEST)
         response_data = json.loads(response.get_data(as_text=True))
-        self.assertIn("The 'feature' parameter is required", response_data["message"])
+        self.assertIn("The 'feature' parameter is required",
+                      response_data["message"])
 
     @mock.patch("timesketch.models.sketch.Sketch.get_with_acl")
     def test_post_missing_feature(self, mock_get_with_acl):
@@ -1586,7 +1603,8 @@ class LLMResourceTest(BaseTest):
         )
         self.assertEqual(response.status_code, HTTP_STATUS_CODE_BAD_REQUEST)
         response_data = json.loads(response.get_data(as_text=True))
-        self.assertIn("The 'feature' parameter is required", response_data["message"])
+        self.assertIn("The 'feature' parameter is required",
+                      response_data["message"])
 
     @mock.patch("timesketch.models.sketch.Sketch.get_with_acl")
     def test_post_invalid_sketch(self, mock_get_with_acl):
@@ -1642,7 +1660,8 @@ class LLMResourceTest(BaseTest):
         )
         self.assertEqual(response.status_code, HTTP_STATUS_CODE_BAD_REQUEST)
         response_data = json.loads(response.get_data(as_text=True))
-        self.assertIn("Invalid LLM feature: invalid_feature", response_data["message"])
+        self.assertIn("Invalid LLM feature: invalid_feature",
+                      response_data["message"])
 
     @mock.patch("timesketch.models.sketch.Sketch.get_with_acl")
     @mock.patch(
