@@ -256,7 +256,7 @@ class EventResource(resources.ResourceMixin, Resource):
         searchindex_id, searchindex_name = self.datastore.resolve_index_alias(
             searchindex_id
         )
-        
+
         # Shitty fix to make data streams work with our setup.
         if "timesketch-timelines" in searchindex_id:
             searchindex_id = "timesketch-timelines"
