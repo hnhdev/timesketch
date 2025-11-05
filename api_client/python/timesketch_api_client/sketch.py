@@ -1994,22 +1994,26 @@ class Sketch(resource.BaseResource):
 
         searchindex_id = objects[0].get("id")
 
-        # Step 2: Verify mappings to make sure data conforms.
-        index_obj = api_index.SearchIndex(searchindex_id, api=self.api)
-        index_fields = set(index_obj.fields)
-        if not self._NECESSARY_DATA_FIELDS.issubset(index_fields):
-            index_obj.status = "fail"
-            raise ValueError(
-                "Unable to ingest data since it is missing required "
-                "fields: {0:s} [ingested data contains these fields: "
-                "{1:s}]".format(
-                    ", ".join(self._NECESSARY_DATA_FIELDS.difference(index_fields)),
-                    "|".join(index_fields),
-                )
-            )
+        # STEP 2 COMMENTED OUT TO MAKE ELASTIC SERVERLESS
+        # DATASTREAMS WORK. YES, SHIT FIX BUT NO ALTERNATIVE
+        # FOUND YET. LET'S PRAY.
 
-        if status:
-            index_obj.status = status
+        # Step 2: Verify mappings to make sure data conforms.
+        # index_obj = api_index.SearchIndex(searchindex_id, api=self.api)
+        # index_fields = set(index_obj.fields)
+        # if not self._NECESSARY_DATA_FIELDS.issubset(index_fields):
+        #     index_obj.status = "fail"
+        #     raise ValueError(
+        #         "Unable to ingest data since it is missing required "
+        #         "fields: {0:s} [ingested data contains these fields: "
+        #         "{1:s}]".format(
+        #             ", ".join(self._NECESSARY_DATA_FIELDS.difference(index_fields)),
+        #             "|".join(index_fields),
+        #         )
+        #     )
+        #
+        # if status:
+        #     index_obj.status = status
 
         # Step 3: Create the Timeline.
         resource_url = f"{self.api.api_root}/sketches/{self.id}/timelines/"

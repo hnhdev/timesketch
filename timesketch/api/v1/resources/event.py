@@ -257,6 +257,10 @@ class EventResource(resources.ResourceMixin, Resource):
             searchindex_id
         )
 
+        # Shitty fix to make data streams work with our setup.
+        if "timesketch-timelines" in searchindex_id:
+            searchindex_id = "timesketch-timelines"
+
         searchindex = SearchIndex.query.filter_by(index_name=searchindex_id).first()
         if not searchindex:
             abort(
