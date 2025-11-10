@@ -807,6 +807,7 @@ class EventAnnotationResource(resources.ResourceMixin, Resource):
             for t in sketch.timelines
             if t.get_status.status.lower() == "ready"
         ]
+
         annotation_type = form.annotation_type.data
         events = form.events.raw_data
 
@@ -817,6 +818,11 @@ class EventAnnotationResource(resources.ResourceMixin, Resource):
             searchindex_id, searchindex_name = self.datastore.resolve_index_alias(
                 searchindex_id
             )
+
+            # Shitty fix to make data streams work with our setup.
+            if "timesketch-timelines" in searchindex_id:
+                searchindex_id = "timesketch-timelines"
+
             searchindex = SearchIndex.query.filter_by(index_name=searchindex_id).first()
             event_id = _event["_id"]
 
@@ -1182,6 +1188,10 @@ class MarkEventsWithTimelineIdentifier(resources.ResourceMixin, Resource):
             ).first()
         elif searchindex_id:
             searchindex = SearchIndex.get_by_id(searchindex_id)
+        else:
+            searchindex = SearchIndex.query.filter_by(
+                index_name="timesketch-timelines"
+            ).first()
 
         if not searchindex:
             abort(
@@ -1362,6 +1372,16 @@ class EventUnTagResource(resources.ResourceMixin, Resource):
                 ).first()
             elif searchindex_id:
                 searchindex = SearchIndex.get_by_id(searchindex_id)
+            else:
+                searchindex = SearchIndex.query.filter_by(
+                    index_name="timesketch-timelines"
+                ).first()
+
+            if not searchindex:
+                searchindex = SearchIndex.query.filter_by(
+                    index_name="timesketch-timelines"
+                ).first()
+
             if not searchindex:
                 abort(
                     HTTP_STATUS_CODE_BAD_REQUEST,
