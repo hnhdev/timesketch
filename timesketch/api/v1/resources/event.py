@@ -820,6 +820,10 @@ class EventAnnotationResource(resources.ResourceMixin, Resource):
             searchindex = SearchIndex.query.filter_by(index_name=searchindex_id).first()
             event_id = _event["_id"]
 
+            # Shitty fix to make data streams work with our setup.
+            if "timesketch-timelines" in searchindex_id:
+                searchindex_id = "timesketch-timelines"
+
             if searchindex_id not in indices:
                 abort(
                     HTTP_STATUS_CODE_BAD_REQUEST,
@@ -935,6 +939,10 @@ class EventAnnotationResource(resources.ResourceMixin, Resource):
             searchindex_id, _ = self.datastore.resolve_index_alias(searchindex_id)
             searchindex = SearchIndex.query.filter_by(index_name=searchindex_id).first()
             event_id = _event["_id"]
+
+            # Shitty fix to make data streams work with our setup.
+            if "timesketch-timelines" in searchindex_id:
+                searchindex_id = "timesketch-timelines"
 
             if searchindex_id not in indices:
                 abort(
