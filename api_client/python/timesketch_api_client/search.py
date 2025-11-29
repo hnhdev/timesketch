@@ -437,7 +437,7 @@ class Search(resource.SketchResource):
         self._chips = []
         self._created_at = ""
         self._description = ""
-        self._indices = "_all"
+        self._indices = [timeline.id for timeline in sketch.list_timelines()] or "_all"
         self._max_entries = self.DEFAULT_SIZE_LIMIT
         self._name = ""
         self._query_dsl = ""
