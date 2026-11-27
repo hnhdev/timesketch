@@ -65,8 +65,8 @@ into the notebook and make use of the latest changes in the API client.
 
 ## Marimo (alongside Jupyter)
 
-A [marimo](https://marimo.io) container runs next to the Jupyter notebook. Jupyter is
-unchanged; use whichever you prefer.
+[Marimo](https://marimo.io) runs inside the same container (and image) as the Jupyter
+notebook, on port 8081. Use whichever you prefer.
 
 | Tool | Deployed URL | Dev URL | Workspace |
 | --- | --- | --- | --- |
@@ -79,4 +79,4 @@ returned from a cell rather than bound as a global, so other cells use it by
 declaring `sketch` as a parameter. To convert an existing notebook run
 `marimo convert notebook.ipynb -o notebook.py`.
 
-Note that `picatrix` is not installed in the marimo image, as it depends on IPython.
+Note that `picatrix` depends on IPython and cannot be used from marimo notebooks.

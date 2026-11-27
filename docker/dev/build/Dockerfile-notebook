@@ -13,7 +13,7 @@ COPY --chown=1000:100 --from=timesketch_api_client python $HOME/timesketch_api_c
 
 RUN pip install jupyter_scheduler jupyterlab-vim jupyter-collaboration jupyterlab-fonts && \
     pip install jupyterlab-lsp "python-lsp-server[all]" && \
-    pip install picatrix ipywidgets && \
+    pip install picatrix ipywidgets marimo altair numpy && \
     pip install pandas[performance,plot-output-formatting] mitreattack-python && \
     pip install -e $HOME/timesketch_api_client
 
@@ -33,4 +33,12 @@ RUN ipython3 profile create
 COPY --chown=1000:100 10-widgets.py $HOME/.ipython/profile_default/startup/10-widgets.py
 COPY --chown=1000:100 Template.ipynb $HOME/work
 
-ENTRYPOINT ["jupyter-lab"]
+# Marimo runs in the same container, on port 8081.
+RUN mkdir -p $HOME/work-marimo
+COPY --chown=1000:100 timesketch_marimo.py $HOME/timesketch_marimo.py
+COPY --chown=1000:100 Template.py $HOME/work-marimo/Template.py
+COPY --chown=1000:100 notebook-entrypoint.sh $HOME/notebook-entrypoint.sh
+ENV HOME=/home/jovyan
+ENV PYTHONPATH=/home/jovyan
+
+ENTRYPOINT ["/home/jovyan/notebook-entrypoint.sh"]
